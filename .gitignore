@@ -14,9 +14,13 @@ dist-ssr
 *.local
 .vite
 
-# Environment and Secrets
+# Environment variables and secrets
 .env
-.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
 !.env.example
 
 # Editor and OS
@@ -31,20 +35,24 @@ Thumbs.db
 *.sln
 *.sw?
 
-# Local test media and artifacts (prevent accidental commits)
+# Test and benchmark outputs
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+screenshots/
+baselines/
+backups/
+bench/
+scratch/
+test-photos/
+
+# Prevent accidental image/video commits (favicon.svg is preserved)
 *.jpg
 *.jpeg
 *.png
 *.webp
 *.gif
 *.bmp
-*.svg
-!public/favicon.svg
-!public/icons.svg
-test-photos/
-baselines/
-backups/
-bench/
-screenshots/
-scratch/
-test-results/
+*.mp4
+*.webm

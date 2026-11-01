@@ -2,16 +2,20 @@
 
 **In-Browser Photograph-to-Vector Reconstruction & Creative Coding Studio**
 
-**Live Website:** [https://codemypicture.netlify.app/](https://codemypicture.netlify.app/)  
-**Source Repository:** [https://github.com/parthmandore/CodeMyPicture](https://github.com/parthmandore/CodeMyPicture)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-codemypicture.netlify.app-blue?style=flat-square)](https://codemypicture.netlify.app/)
+[![Repository](https://img.shields.io/badge/GitHub-CodeMyPicture-black?style=flat-square&logo=github)](https://github.com/parthmandore/CodeMyPicture)
+[![Status](https://img.shields.io/badge/Status-Production%20Ready-success?style=flat-square)]()
 
 ---
 
 ## 1. Project Overview
 
-CodeMyPicture is a modern client-side creative coding studio and vector reconstruction application. It converts uploaded portrait, figure, and scene photographs into genuine, standards-compliant Scalable Vector Graphics (SVG) code directly inside your web browser.
+**CodeMyPicture** is a high-performance client-side creative coding studio and vector reconstruction application. It converts uploaded portrait, figure, and scene photographs into genuine, standards-compliant Scalable Vector Graphics (SVG) code directly inside your web browser.
 
 The system synthesizes scalable mathematical vector geometry rather than embedding base64 raster bitmaps or applying artificial blur filters. Users can inspect the generated markup in an integrated CodeMirror 6 code editor, evaluate real-time technical diagnostics, navigate interactive visual comparison modes (side-by-side, wipe slider, full-scene geometry overlays), and export production-ready vector assets in multiple code formats.
+
+* **Live Demo:** [https://codemypicture.netlify.app/](https://codemypicture.netlify.app/)
+* **Repository:** [https://github.com/parthmandore/CodeMyPicture](https://github.com/parthmandore/CodeMyPicture)
 
 ---
 
@@ -22,7 +26,7 @@ The system synthesizes scalable mathematical vector geometry rather than embeddi
 - **Dual Quality Settings**: Dedicated **High Quality** and **Low Quality** profiles for each synthesis engine, balancing visual detail against SVG payload weight.
 - **Full-Image Scene Coverage**: Structural analysis captures the complete composition—hair volume, head contours, clothing textures, hands, furniture, and environmental details—rather than restricting geometry to facial landmarks.
 - **Interactive Studio Workbench**: Side-by-side comparison pane, interactive split-wipe slider, pan/zoom navigation (25% to 500%), and keyboard-driven Focus Mode (`F`).
-- **Full-Scene Geometry Overlays**: Non-destructive diagnostic overlays for Full-Image Geometry, Edge Contours (Sobel gradient magnitude), Facial Landmarks (optional 478-point MediaPipe mesh), and SVG Path wireframes.
+- **Full-Scene Geometry Overlays**: Non-destructive diagnostic overlays for Full-Image Geometry, Edge Contours (Sobel gradient magnitude), Facial Landmarks (478-point MediaPipe mesh), and SVG Path wireframes.
 - **Multi-Format Code Export**: Instant export as standalone SVG (`portrait.svg`), responsive embeddable HTML (`embed.html`), production React component (`Portrait.jsx`), or high-resolution PNG (`portrait.png`).
 - **Integrated CodeMirror 6 Editor**: Dark Atelier syntax theme, color swatches, path data dimming, XML validation, and word-wrap toggles.
 - **100% In-Browser Privacy**: All image decoding, computer vision inference, palette quantization, and vector tracing execute in local device memory via Web Workers and WebAssembly. No photos are ever uploaded or stored remotely.
@@ -33,14 +37,14 @@ The system synthesizes scalable mathematical vector geometry rather than embeddi
 
 CodeMyPicture provides two independent vector generation pipelines:
 
-### Option A: Painting Mode
+### Painting Mode
 - **Design Intent**: Synthesizes multi-scale organic vector planar masses inspired by physical oil and acrylic portrait paintings.
 - **Color Calibration**: Uses empirical biometric color sampling across facial skin, hair luminance, vermilion lip, and ambient background tones. Eliminates artificial facial mask cutouts and produces continuous, expressive planar forms.
 - **Edge Character**: Organic vector boundaries with 100% opaque planar layering and zero transparent seams.
 
-### Option B: Recreation Mode
+### Recreation Mode
 - **Design Intent**: A fidelity-focused photographic vector reconstruction pipeline.
-- **Structure Tracking**: Accurately preserves fine facial structure, iris detail, hair volume, glasses frames, and narrow clothing patterns (such as thin stripes or lace).
+- **Structure Tracking**: Accurately preserves fine facial structure, iris detail, hair volume, glasses frames, and narrow clothing patterns.
 - **Geometric Configuration**: Configured with subpixel coordinate precision (`roundcoords: 2`), tight curve tolerances (`ltres: 0.6`, `qtres: 0.6`), micro-speck preservation (`pathomit: 3`), and zero blur filters.
 
 ---
@@ -50,7 +54,7 @@ CodeMyPicture provides two independent vector generation pipelines:
 Both modes provide two verified quality profiles:
 
 | Mode | Quality Tier | Target Characteristics | Typical Use Case |
-|---|---|---|---|
+| :--- | :--- | :--- | :--- |
 | **Painting** | **High Quality** | Multi-layer planar depth, subtle shading gradations, nuanced facial planes. | Digital art prints, high-resolution hero illustrations. |
 | **Painting** | **Low Quality** | Broad painterly planes, streamlined path counts, fast browser rendering. | Lightweight web assets, avatars, mobile UI graphics. |
 | **Recreation** | **High Quality** | Dense contour tracking, tight curve fitting (0.6px tolerance), dedicated tones. | Detailed vector reproduction, pen-plotter vectorization. |
@@ -58,15 +62,26 @@ Both modes provide two verified quality profiles:
 
 ---
 
-## 5. Architecture Overview
+## 5. Technology Stack
 
-The application is structured into decoupled client-side layers:
+- **UI Framework**: React 19 (`react`, `react-dom`)
+- **Language**: TypeScript 5.9 / 6.0 (`typescript`)
+- **Build Tool & Bundler**: Vite 8 (`vite`, `@vitejs/plugin-react`)
+- **Code Editor**: CodeMirror 6 (`codemirror`, `@codemirror/view`, `@codemirror/state`, `@codemirror/language`, `@codemirror/lang-xml`, `@codemirror/lang-html`, `@codemirror/lang-javascript`, `@lezer/highlight`)
+- **Computer Vision**: MediaPipe Tasks Vision WebAssembly (`@mediapipe/tasks-vision`)
+- **Vector Tracing**: ImageTracerJS (`imagetracerjs`) with custom planar optimization
+- **Iconography**: Lucide React (`lucide-react`)
+- **Compression Telemetry**: Browser native `CompressionStream('gzip')` API
 
-```
+---
+
+## 6. Architecture Overview
+
+```text
 [ Upload & Calibration Stage ]
        │
        ├── Image Ingestion & Buffer Validation (imageValidator.ts, imageLoader.ts)
-       ├── Computer Vision Landmarks (MediaPipe Tasks Vision WASM)
+       ├── Computer Vision Landmarks (MediaPipe Tasks Vision WASM & TFLite)
        └── Full-Image Sobel Edge & Contour Analysis (imageGeometryService.ts)
        │
 [ Studio Workbench State Machine ]
@@ -86,24 +101,7 @@ The application is structured into decoupled client-side layers:
 
 ---
 
-## 6. Technology Stack
-
-Based on actual project dependencies in `package.json` and source code:
-
-- **UI Framework**: React 19 (`react`, `react-dom`)
-- **Language**: TypeScript 5.8 / 6.0 (`typescript`)
-- **Build Tool & Dev Server**: Vite 8 (`vite`, `@vitejs/plugin-react`)
-- **Code Editor**: CodeMirror 6 (`codemirror`, `@codemirror/view`, `@codemirror/state`, `@codemirror/language`, `@codemirror/lang-xml`, `@codemirror/lang-html`, `@codemirror/lang-javascript`, `@lezer/highlight`)
-- **Computer Vision**: MediaPipe Tasks Vision (`@mediapipe/tasks-vision`)
-- **Vector Tracing**: ImageTracerJS (`imagetracerjs`) with custom planar optimization
-- **Iconography**: Lucide React (`lucide-react`)
-- **Compression Telemetry**: Browser native `CompressionStream('gzip')` API
-
----
-
 ## 7. How Image Processing Works
-
-The pipeline executes entirely inside the client session without external API dependencies:
 
 1. **Pre-Decoding Validation**: Validates file existence, MIME type (JPEG, PNG, WebP), and byte size (up to 25 MB). Checks binary magic bytes to prevent malformed buffer ingestion.
 2. **In-Browser Decoding**: Decodes image bytes into an ephemeral `HTMLImageElement` via `URL.createObjectURL()`. Dimensions, aspect ratio, and luminance metrics are calculated.
@@ -118,7 +116,7 @@ The pipeline executes entirely inside the client session without external API de
 ## 8. Export Functionality
 
 | Format | File Name | Description |
-|---|---|---|
+| :--- | :--- | :--- |
 | **SVG Document** | `portrait.svg` | Standards-compliant standalone SVG vector file. Fully editable in Figma, Adobe Illustrator, Inkscape, or pen-plotter workflows. |
 | **HTML Embed** | `embed.html` | Self-contained HTML5 file with dark-theme viewport framing and responsive styling. Ready for browser preview or iframe embedding. |
 | **React Component** | `Portrait.jsx` | Production React component formatted with valid JSX attributes (`strokeWidth`, `fillRule`) and TypeScript prop types. |
@@ -126,46 +124,25 @@ The pipeline executes entirely inside the client session without external API de
 
 ---
 
-## 9. Technical Diagnostics
+## 9. Privacy and Local Processing
 
-The Studio Workbench evaluates 11 verified engineering values in real time without blocking the UI:
-
-1. **Source Dimensions & Aspect Ratio**: Pixel width, pixel height, and computed ratio (e.g. `600 × 800 px (0.75:1)`).
-2. **Generated SVG Paths**: Total count of `<path>` elements in the document.
-3. **Total Shapes & Elements**: Total geometric primitives (`<path>`, `<rect>`, `<circle>`, `<polygon>`, etc.) versus total document elements (including `<g>`, `<defs>`).
-4. **Distinct SVG Fill Colors**: Total unique fill color values with interactive visual swatches.
-5. **Source Colors Sampled**: Genuine biometric calibration anchors (`Biometric Skin`, `Hair Volume`, `Vermilion Lip`, `Ambient Backing`).
-6. **Raw SVG Payload Size**: Exact byte size of the generated XML code.
-7. **Gzipped Transfer Size**: Calculated via browser native `CompressionStream('gzip')` with content hashing.
-8. **Synthesis Execution Duration**: Background worker processing elapsed time in milliseconds and seconds.
-9. **Reconstruction Mode**: Active pipeline (`Painting` or `Recreation`).
-10. **Selected Quality**: Active resolution profile (`High` or `Low`).
-11. **Processing Status**: Verified execution state (`Success`, `In Progress`, `Idle`, or `Error`).
-
----
-
-## 10. Privacy and Client-Side Processing
-
-CodeMyPicture adheres to a strict client-side privacy architecture:
+CodeMyPicture is engineered around strict, non-negotiable client-side privacy:
 
 - **Zero Server Uploads**: No image pixels, biometric vectors, or rendered SVG documents are ever transmitted over the network or stored in external databases.
 - **Local In-Memory Execution**: Computer vision inference, color quantization, and SVG tracing execute strictly in browser Web Workers and WebAssembly memory.
 - **Ephemeral Lifecycles**: Image object URLs (`blob:`) and decoded canvas buffers are explicitly revoked via `safeRevokeObjectURL()` whenever an image is cleared or replaced.
+- **Offline Capable**: All required machine learning models and WebAssembly modules are hosted locally within `public/`, eliminating any runtime dependency on third-party CDNs.
 
 ---
 
-## 11. Prerequisites
+## 10. Installation & Setup
 
-- **Node.js**: Version `20.0.0` or higher
-- **npm**: Version `9.0.0` or higher (or equivalent `pnpm` / `yarn`)
-- **Web Browser**: Modern browser with WebAssembly and `CompressionStream` support (Chrome 80+, Edge 80+, Firefox 113+, Safari 16.4+)
+### Prerequisites
+- **Node.js**: `20.0.0` or higher
+- **npm**: `9.0.0` or higher
+- **Web Browser**: Modern browser with WebAssembly support (Chrome, Edge, Firefox, Safari)
 
----
-
-## 12. Local Installation Instructions
-
-Clone the repository and install dependencies using npm:
-
+### Installation
 ```bash
 # Clone repository
 git clone https://github.com/parthmandore/CodeMyPicture.git
@@ -177,9 +154,7 @@ npm install
 
 ---
 
-## 13. Development Commands
-
-The project uses scripts defined directly in `package.json`:
+## 11. Development Commands
 
 ```bash
 # Start local development server with Vite hot module replacement
@@ -190,9 +165,7 @@ By default, Vite serves the application at `http://localhost:5173/`.
 
 ---
 
-## 14. Production Build Instructions
-
-To compile TypeScript and produce an optimized production bundle:
+## 12. Production Build
 
 ```bash
 # Type check and build production bundle
@@ -210,105 +183,63 @@ Build outputs are generated into the `dist/` directory:
 
 ---
 
-## 15. Project Directory Structure
+## 13. Repository Structure
 
 ```text
 CodeMyPicture/
 ├── public/
-│   └── favicon.svg                  # Application vector favicon
+│   ├── favicon.svg                               # Application vector icon
+│   ├── face_landmarker.task                      # MediaPipe 478-point facial landmark model
+│   ├── selfie_multiclass_256x256.tflite          # MediaPipe selfie segmentation model
+│   └── wasm/                                     # MediaPipe WebAssembly binaries and JS runtime
 ├── src/
-│   ├── App.tsx                      # Root application component & view router
-│   ├── main.tsx                     # React DOM entry point
-│   ├── flags.ts                     # Feature flags
-│   ├── vite-env.d.ts                # Vite environment types
+│   ├── App.tsx                                   # Root application orchestrator
+│   ├── main.tsx                                  # React DOM entry point
+│   ├── flags.ts                                  # Feature flags
+│   ├── vite-env.d.ts                             # Vite environment types
 │   ├── components/
-│   │   ├── common/                  # Shared UI components (Button, ErrorAlert, StatusPill)
-│   │   ├── landing/                 # Landing page technical sections
-│   │   │   ├── ModeComparisonSection.tsx      # Painting vs Recreation comparison
-│   │   │   ├── WorkflowSection.tsx            # 5-stage workflow progression
-│   │   │   ├── TechnicalFeaturesSection.tsx   # Engine architecture & geometry
-│   │   │   ├── LocalPrivacySection.tsx        # Client-side privacy banner
-│   │   │   ├── ExportFormatsSection.tsx       # Output format cards
-│   │   │   └── DiagnosticsInfoSection.tsx     # 11 telemetry metrics overview
-│   │   ├── layout/                  # Layout shell (Header, Footer)
-│   │   ├── studio/                  # Studio Workbench components
-│   │   │   ├── StepIndicator.tsx              # Pipeline stage indicator
-│   │   │   ├── V4DiagnosticWorkbench.tsx      # Main Studio Workbench controller
-│   │   │   └── v4/                            # Studio Workbench subcomponents
-│   │   │       ├── GeometryOverlay.tsx        # Full-image & contour overlay renderer
-│   │   │       ├── ReconstructionAnimation.tsx# Loading animation HUD & overlays
-│   │   │       ├── TechnicalDiagnosticsPanel.tsx # 11-metric telemetry dashboard
-│   │   │       ├── V4CodeEditor.tsx           # CodeMirror 6 SVG/HTML/JSX/Diagnostics editor
-│   │   │       ├── V4ExportModal.tsx          # Export code modal
-│   │   │       ├── V4ResultPane.tsx           # Interactive preview pane (wipe, zoom, diff)
-│   │   │       ├── V4Terminal.tsx             # Studio execution log
-│   │   │       └── V4Toast.tsx                # Toast notification system
-│   │   └── upload/                  # Ingestion workflow
-│   │       ├── Dropzone.tsx                   # Drag-and-drop upload chamber
-│   │       ├── PhotoPreview.tsx               # Calibration preview with geometry overlays
-│   │       └── UploadWorkflow.tsx             # Upload workflow coordinator
+│   │   ├── common/                               # Common components (ErrorAlert)
+│   │   ├── landing/                              # Landing page technical sections
+│   │   ├── layout/                               # Layout shell (Header, Footer)
+│   │   ├── studio/                               # Studio Workbench components
+│   │   │   ├── StepIndicator.tsx                 # Pipeline stage indicator
+│   │   │   ├── V4DiagnosticWorkbench.tsx         # Main Studio Workbench controller
+│   │   │   └── v4/                               # ResultPane, CodeEditor, Terminal, Overlays
+│   │   └── upload/                               # Dropzone, PhotoPreview, UploadWorkflow
 │   ├── engine/
-│   │   └── v4/                      # Vector synthesis engines
-│   │       ├── colorAnalysis.ts               # Biometric tone extraction
-│   │       ├── paintingEngine.ts              # Painting mode planar brushwork engine
-│   │       ├── recreationEngine.ts            # Recreation mode high-fidelity engine
-│   │       ├── svgOptimizer.ts                # SVG path optimization
-│   │       ├── tiers.ts                       # High/Low quality profile definitions
-│   │       ├── types.ts                       # Engine type definitions
-│   │       ├── v4Pipeline.ts                  # Synthesis coordinator
-│   │       ├── experimentA/                   # Baseline region-aware tracer
-│   │       ├── experimentB/                   # Baseline source-guided reconstruction
-│   │       ├── experimentC/                   # Baseline hybrid reconstruction
-│   │       ├── export/                        # Comparison, speck counter, SSIM utilities
-│   │       └── sizeOptimizer/                 # Path and SVG cleaner/minifier utilities
+│   │   └── v4/                                   # Vector synthesis engines
+│   │       ├── colorAnalysis.ts                  # Biometric tone extraction
+│   │       ├── paintingEngine.ts                 # Painting mode planar engine
+│   │       ├── recreationEngine.ts               # Recreation mode high-fidelity engine
+│   │       ├── svgOptimizer.ts                   # SVG path optimizer
+│   │       ├── tiers.ts                          # High/Low quality configurations
+│   │       ├── types.ts                          # Engine interfaces and contracts
+│   │       ├── v4Pipeline.ts                     # Synthesis coordinator
+│   │       ├── sketch/                           # Charcoal sketch vector engine
+│   │       ├── export/                           # SSIM, speck counter, and standalone HTML
+│   │       └── sizeOptimizer/                    # Vector size and path optimizers
 │   ├── services/
-│   │   ├── faceDetection/           # MediaPipe Tasks Vision wrapper
-│   │   ├── geometry/                # Full-image Sobel edge detector & contour tracer
-│   │   └── segmentation/            # Image segmentation services
-│   ├── styles/                      # Unified Atelier dark-theme stylesheets
-│   │   ├── base.css                           # Base HTML element styling
-│   │   ├── components.css                     # Common UI & landing components
-│   │   ├── geometryOverlay.css                # Geometry visualization styles
-│   │   ├── reconstructionAnimation.css        # Loading animation styles
-│   │   ├── tokens.css                         # CSS custom properties (colors, typography)
-│   │   └── v4workbench.css                    # Studio Workbench layout styles
-│   ├── types/                       # Shared TypeScript interfaces
-│   ├── utils/                       # Utility helpers (formatters, imageLoader, svgDiagnostics)
+│   │   ├── faceDetection/                        # MediaPipe Tasks Vision wrapper
+│   │   ├── geometry/                             # Full-image Sobel edge and contour tracer
+│   │   └── segmentation/                         # Image segmentation services
+│   ├── styles/                                   # Atelier dark-theme stylesheets
+│   ├── types/                                    # Shared TypeScript interfaces
+│   ├── utils/                                    # Utility helpers
 │   └── workers/
-│       └── v4PipelineWorker.ts      # Web Worker running vector synthesis off main thread
-├── index.html                       # HTML5 entry with SEO and Open Graph metadata
-├── package.json                     # Project manifest and dependencies
-├── tsconfig.json                    # TypeScript compiler configuration
-└── vite.config.ts                   # Vite configuration
+│       └── v4PipelineWorker.ts                   # Web Worker for non-blocking vectorization
+├── .env.example                                  # Template environment configuration
+├── .gitignore                                    # Production Git ignore rules
+├── index.html                                    # HTML5 application shell
+├── package.json                                  # Project manifest and dependencies
+├── package-lock.json                             # Dependency lockfile
+├── tsconfig.json                                 # TypeScript compiler configuration
+├── vercel.json                                   # Production deployment routing
+└── vite.config.ts                                # Vite configuration
 ```
 
 ---
 
-## 16. Testing and Validation Instructions
-
-To validate the codebase locally:
-
-```bash
-# 1. Run full TypeScript verification and production build
-npm run build
-
-# 2. Preview the built application in local server
-npm run preview
-```
-
-### Manual Verification Checklist
-- **Dropzone**: Drag and drop any JPEG, PNG, or WebP photo into the upload area.
-- **Calibration Stage**: Verify that the calibration screen extracts full-image contours across hair, body, and background.
-- **Studio Workbench**: Click "Open in Studio Workbench" and verify that synthesis completes within normal execution time (~5s to 12s depending on image size).
-- **Mode Switching**: Switch between **Painting** and **Recreation** modes using the top dropdown selector.
-- **Quality Switching**: Switch between **High** and **Low** quality profiles.
-- **Geometry Overlays**: In the Result Pane, toggle `[Full Geometry]`, `[Edge Contours]`, `[Landmarks]`, `[SVG Paths]`, and `[None]`.
-- **Diagnostics Tab**: In the Code Editor, select the `Diagnostics` tab and verify all 11 technical metrics render with accurate values.
-- **Export Formats**: Test downloading `portrait.svg`, `embed.html`, `Portrait.jsx`, and `portrait.png`.
-
----
-
-## 17. Known Limitations
+## 14. Known Limitations
 
 - **Image Complexity vs. File Weight**: Highly intricate scenes with complex textures (e.g. dense foliage or knitted knitwear) naturally generate higher path counts and larger SVG payloads.
 - **Severe Lighting Conditions**: Extremely underexposed or blown-out photographs offer low luminance contrast, which may reduce edge detection fidelity.
@@ -317,17 +248,8 @@ npm run preview
 
 ---
 
-## 18. Future Improvements
+## 15. License & Project Information
 
-- **Multi-Subject Tracking**: Automatic multi-face biometric tone calibration for group portraits.
-- **Interactive Palette Shifting**: User-controlled tonal curve mapping and palette swap presets in the Studio Workbench.
-- **Vector Path Editing**: In-browser bezier node editing tool for manual vector adjustments.
-- **WebGPU Acceleration**: Native WebGPU compute shaders for accelerated edge detection on high-resolution source images.
-
----
-
-## 19. License & Project Information
-
-- **Status**: Private repository. All rights reserved.
 - **Live Deployment**: [https://codemypicture.netlify.app/](https://codemypicture.netlify.app/)
 - **Repository**: [https://github.com/parthmandore/CodeMyPicture](https://github.com/parthmandore/CodeMyPicture)
+- **Author**: Parth Mandore
