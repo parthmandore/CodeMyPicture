@@ -3,19 +3,25 @@ import {
   Trash2,
   RefreshCw,
   ArrowRight,
-  Eye,
-  EyeOff,
   CheckCircle2,
   AlertTriangle,
   Cpu,
+  Layers,
   Sparkles,
-  Users,
 } from 'lucide-react';
 import { ValidatedImage } from '../../types/upload';
 import { formatBytes, formatDimensions, formatAspectRatio } from '../../utils/formatters';
 import { FaceDetectionResult } from '../../services/faceDetection/types';
 import { useFaceDetection } from '../../services/faceDetection';
-import { Button } from '../common/Button';
+import {
+  extractFullImageGeometry,
+  FullImageGeometryData,
+} from '../../services/geometry/imageGeometryService';
+import {
+  GeometryOverlay,
+  GeometryOverlayControls,
+  GeometryOverlayMode,
+} from '../studio/v4/GeometryOverlay';
 
 export interface PhotoPreviewProps {
   image: ValidatedImage;
@@ -32,8 +38,9 @@ export const PhotoPreview: React.FC<PhotoPreviewProps> = ({
   onContinue,
   isGenerating = false,
 }) => {
-  const [showMeshOverlay, setShowMeshOverlay] = useState(true);
+  const [overlayMode, setOverlayMode] = useState<GeometryOverlayMode>('geometry');
   const [detectionResult, setDetectionResult] = useState<FaceDetectionResult | null>(null);
+  const [geometryData, setGeometryData] = useState<FullImageGeometryData | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
@@ -56,6 +63,14 @@ export const PhotoPreview: React.FC<PhotoPreviewProps> = ({
           const result = await detect(imgRef.current);
           if (!isCancelled) {
             setDetectionResult(result);
+            // Compute full-image geometry integrating landmarks if detected
+            const geo = extractFullImageGeometry(
+              imgRef.current,
+              image.width,
+              image.height,
+              result?.landmarks || []
+            );
+            setGeometryData(geo);
           }
         }
       } catch (err) {
@@ -67,7 +82,6 @@ export const PhotoPreview: React.FC<PhotoPreviewProps> = ({
       }
     }
 
-    // If image is already loaded, run detection
     if (imgRef.current && imgRef.current.complete) {
       runDetection();
     }
@@ -75,7 +89,7 @@ export const PhotoPreview: React.FC<PhotoPreviewProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [image.objectUrl, isReady, engineState, detect, initialize]);
+  }, [image.objectUrl, image.width, image.height, isReady, engineState, detect, initialize]);
 
   const handleImageLoad = async () => {
     if (imgRef.current) {
@@ -83,8 +97,18 @@ export const PhotoPreview: React.FC<PhotoPreviewProps> = ({
       try {
         const result = await detect(imgRef.current);
         setDetectionResult(result);
+        const geo = extractFullImageGeometry(
+          imgRef.current,
+          image.width,
+          image.height,
+          result?.landmarks || []
+        );
+        setGeometryData(geo);
       } catch (err) {
         console.error('Detection load error:', err);
+        // Fallback geometry even if face detection fails
+        const geo = extractFullImageGeometry(imgRef.current, image.width, image.height, []);
+        setGeometryData(geo);
       } finally {
         setIsAnalyzing(false);
       }
@@ -95,185 +119,184 @@ export const PhotoPreview: React.FC<PhotoPreviewProps> = ({
     onContinue(detectionResult || undefined, imgRef.current || undefined);
   };
 
-  const hasFace = detectionResult?.detected && (detectionResult.faceCount > 0);
+  const hasFace = Boolean(detectionResult?.detected && detectionResult.faceCount > 0);
 
   return (
-    <div className="preview-container">
-      {/* Top action toolbar */}
-      <div className="preview-toolbar">
-        <div className="preview-toolbar__meta mono">
-          <span className="preview-chip format-chip">{image.mimeType.replace('image/', '').toUpperCase()}</span>
-          <span className="preview-chip">{formatBytes(image.sizeBytes)}</span>
-          <span className="preview-chip">{formatDimensions(image.width, image.height)}</span>
-          <span className="preview-chip">{formatAspectRatio(image.width, image.height)}</span>
+    <div className="preview-container-atelier">
+      {/* Top Technical Metadata Toolbar */}
+      <div className="preview-toolbar-atelier">
+        <div className="preview-toolbar-atelier__meta mono">
+          <span className="meta-chip meta-chip--format">{image.mimeType.replace('image/', '').toUpperCase()}</span>
+          <span className="meta-chip">{formatBytes(image.sizeBytes)}</span>
+          <span className="meta-chip">{formatDimensions(image.width, image.height)}</span>
+          <span className="meta-chip">{formatAspectRatio(image.width, image.height)}</span>
         </div>
 
-        <div className="preview-toolbar__actions">
-          <Button
-            variant="ghost"
-            size="sm"
+        <div className="preview-toolbar-atelier__actions">
+          <button
+            type="button"
+            className="v4-btn"
             onClick={onReplace}
-            leftIcon={<RefreshCw size={14} />}
-            title="Choose a different image file"
+            title="Select a different photograph"
             disabled={isGenerating}
           >
-            Replace Photo
-          </Button>
-          <Button
-            variant="danger"
-            size="sm"
+            <RefreshCw size={12} style={{ marginRight: '5px' }} />
+            <span>Replace</span>
+          </button>
+
+          <button
+            type="button"
+            className="v4-btn v4-btn--danger"
             onClick={onRemove}
-            leftIcon={<Trash2 size={14} />}
-            title="Remove current photo"
+            title="Remove current photograph"
             disabled={isGenerating}
           >
-            Remove
-          </Button>
+            <Trash2 size={12} style={{ marginRight: '5px' }} />
+            <span>Remove</span>
+          </button>
         </div>
       </div>
 
-      {/* Main Preview Canvas Viewport */}
-      <div className="preview-viewport-card">
-        <div className="preview-image-stage">
-          {/* Base Photographic Image */}
-          <img
-            ref={imgRef}
-            src={image.objectUrl}
-            alt="Source selfie portrait for vector recreation"
-            className="preview-image"
-            onLoad={handleImageLoad}
-          />
+      {/* Main Preview Viewport */}
+      <div className="preview-card-atelier">
+        <div className="preview-stage-atelier">
+          <div
+            style={{
+              position: 'relative',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              maxWidth: '100%',
+              maxHeight: '100%',
+            }}
+          >
+            <img
+              ref={imgRef}
+              src={image.objectUrl}
+              alt="Source photograph ready for vector reconstruction"
+              className="preview-image-atelier"
+              onLoad={handleImageLoad}
+            />
 
-          {/* MediaPipe Mesh & Bounding Box Landmark Overlay */}
-          {showMeshOverlay && detectionResult?.landmarks && detectionResult.landmarks.length > 0 && (
-            <svg
-              className="preview-mesh-overlay"
-              viewBox="0 0 1000 1000"
-              preserveAspectRatio="none"
-              aria-label="MediaPipe Face Landmark Mesh Visualization"
-            >
-              {/* Optional bounding box */}
-              {detectionResult.boundingBox && (
-                <rect
-                  x={detectionResult.boundingBox.xMin * 1000}
-                  y={detectionResult.boundingBox.yMin * 1000}
-                  width={detectionResult.boundingBox.width * 1000}
-                  height={detectionResult.boundingBox.height * 1000}
-                  className="mesh-bounding-box"
-                />
-              )}
+            {/* Full-Image Geometry, Edge Contours, and Optional Facial Landmarks Overlays */}
+            <GeometryOverlay
+              width={image.width}
+              height={image.height}
+              mode={overlayMode}
+              geometryData={geometryData}
+              landmarks={detectionResult?.landmarks}
+            />
+          </div>
 
-              {/* 478 Landmark Points */}
-              {detectionResult.landmarks.map((pt, idx) => (
-                <circle
-                  key={idx}
-                  cx={pt.x * 1000}
-                  cy={pt.y * 1000}
-                  r={idx % 10 === 0 ? 3 : 1.5}
-                  className={idx % 10 === 0 ? 'mesh-point-key' : 'mesh-point-subtle'}
-                />
-              ))}
-            </svg>
-          )}
-
-          {/* Overlay Toggle Switch (if landmarks are available) */}
-          {detectionResult?.landmarks && detectionResult.landmarks.length > 0 && (
-            <button
-              type="button"
-              className="mesh-toggle-btn"
-              onClick={() => setShowMeshOverlay((v) => !v)}
-              title={showMeshOverlay ? 'Hide Landmark Mesh' : 'Show Landmark Mesh'}
-            >
-              {showMeshOverlay ? <EyeOff size={14} /> : <Eye size={14} />}
-              <span>{showMeshOverlay ? 'Hide Landmark Mesh' : 'Show Landmark Mesh'}</span>
-            </button>
-          )}
+          {/* Visualization Controls (Full Geometry, Contours, Landmarks, None) */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '12px',
+              left: '12px',
+              zIndex: 30,
+            }}
+          >
+            <GeometryOverlayControls
+              activeMode={overlayMode}
+              onModeChange={setOverlayMode}
+              hasLandmarks={hasFace}
+              hasSvgPaths={false}
+            />
+          </div>
 
           {/* Analyzing HUD Badge */}
           {isAnalyzing && (
-            <div className="analyzing-hud">
-              <div className="analyzing-hud__spinner" />
-              <span>Analyzing face geometry...</span>
+            <div className="preview-analyzing-hud mono">
+              <div className="analyzing-hud-spinner" aria-hidden="true" />
+              <span>Analyzing full composition geometry & contours…</span>
             </div>
           )}
         </div>
 
-        {/* Technical Calibration & Face Detection Report Card */}
-        <div className="calibration-report">
-          <div className="calibration-report__header">
-            <div className="calibration-report__title-row">
-              <span className="calibration-icon-box">
+        {/* Technical Calibration Specs Card */}
+        <div className="calibration-card-atelier">
+          <div className="calibration-card__header mono">
+            <span className="calibration-dot" aria-hidden="true" />
+            <span>GEOMETRIC & BIOMETRIC CALIBRATION SUMMARY</span>
+          </div>
+
+          <div className="calibration-card__body">
+            <div className="calibration-card__status-row">
+              <span className="calibration-status-icon">
                 {hasFace ? (
-                  <CheckCircle2 size={18} className="text-success" />
+                  <CheckCircle2 size={15} style={{ color: 'var(--moss)' }} />
                 ) : isAnalyzing ? (
-                  <Cpu size={18} className="text-warning pulse-spin" />
+                  <Cpu size={15} style={{ color: 'var(--amber)' }} />
                 ) : (
-                  <AlertTriangle size={18} className="text-warning" />
+                  <CheckCircle2 size={15} style={{ color: 'var(--moss)' }} />
                 )}
               </span>
+
               <div>
-                <h4 className="calibration-title">
+                <h3 className="calibration-heading">
                   {hasFace
-                    ? 'Face Geometry Verified'
+                    ? 'BIOMETRIC & SCENE GEOMETRY CALIBRATED'
                     : isAnalyzing
-                    ? 'Processing MediaPipe Face Landmarker...'
-                    : 'No Distinct Face Detected'}
-                </h4>
-                <p className="calibration-description">
+                    ? 'ANALYZING FULL COMPOSITION GEOMETRY…'
+                    : 'FULL-IMAGE SCENE GEOMETRY CALIBRATED'}
+                </h3>
+                <p className="calibration-subtext">
                   {hasFace
-                    ? `Identified ${detectionResult?.landmarks?.length || 478} 3D facial landmark points across eye contours, jawline, and nose bridge.`
+                    ? `Mapped ${geometryData?.edgeContours?.length || 'full'} scene contours and ${detectionResult?.landmarks?.length || 478} biometric landmarks across hair, facial structure, clothing, and background.`
                     : isAnalyzing
-                    ? 'Evaluating facial orientation and landmark points using browser WASM runtime...'
-                    : 'The model could not detect a clear human face in this photo. You can still continue to the studio shell or replace the photo with a clearer selfie.'}
+                    ? 'Processing scene contours, luminance gradients, and structural boundary meshes in local WebAssembly memory…'
+                    : `Extracted ${geometryData?.edgeContours?.length || 'scene'} continuous edge contours across clothing, body, and background scene elements.`}
                 </p>
               </div>
             </div>
 
             {detectionResult?.latencyMs !== undefined && (
-              <span className="latency-badge mono">
-                Inference: {detectionResult.latencyMs} ms
+              <span className="calibration-latency-tag">
+                WASM: {detectionResult.latencyMs} ms
               </span>
             )}
           </div>
 
-          {/* Multiple faces detected notification */}
-          {detectionResult?.selectionMessage && (
-            <div className="multi-face-notice mono">
-              <Users size={14} className="text-cyan" />
-              <span>{detectionResult.selectionMessage}</span>
-            </div>
-          )}
-
           {engineError && (
-            <div className="engine-error-notice">
-              <AlertTriangle size={15} />
-              <span>{engineError}</span>
+            <div className="calibration-error-box">
+              <AlertTriangle size={13} style={{ flexShrink: 0 }} />
+              <span style={{ flex: 1 }}>{engineError}</span>
+              <button
+                type="button"
+                className="v4-btn v4-btn--sm"
+                onClick={() => initialize()}
+                style={{ fontSize: '11px', padding: '3px 8px', marginLeft: '8px' }}
+                title="Retry MediaPipe Face Landmarker initialization"
+              >
+                Retry
+              </button>
             </div>
           )}
 
-          {/* Primary Action Button */}
-          <div className="calibration-cta-row">
-            <div className="calibration-cta-hint">
-              <Sparkles size={14} style={{ color: '#F59E0B' }} />
-              <span>
-                Engine V5 (Default): Converts facial geometry into a standalone, offline-ready face.html CAD vector character.
-              </span>
+          {/* Action Row */}
+          <div className="calibration-card__actions">
+            <div className="calibration-card__hint">
+              <Sparkles size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+              <span>Ready for synthesis. Choose Painting or Recreation inside the Workbench.</span>
             </div>
 
-            <Button
-              variant="primary"
-              size="lg"
+            <button
+              type="button"
+              className="v4-btn v4-btn--accent preview-continue-btn"
               onClick={handleContinueClick}
-              rightIcon={<ArrowRight size={18} />}
-              className="primary-continue-btn"
-              isLoading={isGenerating}
-              disabled={isAnalyzing}
+              disabled={isGenerating}
+              title="Launch the CodeMyPicture Studio Workbench"
             >
-              {isGenerating ? 'Synthesizing V5 Character...' : 'Generate V5 Character (face.html)'}
-            </Button>
+              <Layers size={13} style={{ marginRight: '6px' }} />
+              <span>{isGenerating ? 'Synthesizing…' : 'Open in Studio Workbench'}</span>
+              <ArrowRight size={13} style={{ marginLeft: '6px' }} />
+            </button>
           </div>
         </div>
       </div>
     </div>
   );
 };
+
+export default PhotoPreview;

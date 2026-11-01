@@ -1,16 +1,22 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { SplitSquareVertical } from 'lucide-react';
 import { WorkbenchStatus } from '../../../engine/v4/types';
+import {
+  GeometryOverlay,
+  InspectPopover,
+  GeometryOverlayMode,
+} from './GeometryOverlay';
+import {
+  extractFullImageGeometry,
+  FullImageGeometryData,
+} from '../../../services/geometry/imageGeometryService';
+import { SvgSizeStats } from '../../../utils/svgDiagnostics';
 
 export type ResultViewMode = 'result' | 'photo' | 'side-by-side' | 'wipe-slider' | 'diff';
 
-import type { AllQualitiesResult, AllTiersResult, QualitySetting, QualityTier } from '../../../engine/v4/tiers';
-
 export interface V4ResultPaneProps {
-  tiers?: AllQualitiesResult | AllTiersResult | null;
-  selectedTier?: QualitySetting | QualityTier | string;
-  onSelectTier?: (tier: any) => void;
   mode?: 'recreation' | 'painting';
+  quality?: 'high' | 'medium' | 'low';
   currentImgUrl: string;
   fileName?: string;
   svgBlobUrl: string;
@@ -22,28 +28,19 @@ export interface V4ResultPaneProps {
   progressPercent?: number;
   width: number;
   height: number;
+  sizeStats?: SvgSizeStats | null;
   isDraggingFile?: boolean;
   onDropAreaClick?: () => void;
   accentColor?: string;
-  // Kept optional for backward compatibility
   layers?: any[];
   landmarks?: any[];
-  onIsolateLayer?: (layerId: string | null) => void;
-  activeIsolatedLayerId?: string | null;
-  onSkipAnimation?: () => void;
-  onReplayAnimation?: () => void;
-  isPaintingActive?: boolean;
-  onPaintingFinished?: () => void;
-  onStageChange?: (stage: string) => void;
 }
 
 export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
-  currentImgUrl,
-  tiers,
-  selectedTier = 'high',
-  onSelectTier,
   mode = 'painting',
-  fileName = 'portrait.jpg',
+  quality = 'high',
+  currentImgUrl,
+  fileName: _fileName = 'photo.jpg',
   svgBlobUrl,
   lastGoodBlobUrl,
   diffBlobUrl,
@@ -53,8 +50,12 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
   progressPercent: _progressPercent = 0,
   width,
   height,
+  sizeStats,
   isDraggingFile = false,
   onDropAreaClick,
+  accentColor = '#FF4F2E',
+  layers = [],
+  landmarks = [],
 }) => {
   const [viewMode, setViewMode] = useState<ResultViewMode>('result');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
@@ -62,6 +63,52 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
   const [isPanning, setIsPanning] = useState<boolean>(false);
   const [sliderPos, setSliderPos] = useState<number>(50);
   const [isFocusMode, setIsFocusMode] = useState<boolean>(false);
+  const [overlayMode, setOverlayMode] = useState<GeometryOverlayMode>('none');
+  const [geometryData, setGeometryData] = useState<FullImageGeometryData | null>(null);
+
+  // Live timer for static generating text ("Generating... 4.2s")
+  const [elapsedSec, setElapsedSec] = useState<number>(0);
+  const genStartRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (isGenerating) {
+      genStartRef.current = Date.now();
+      setElapsedSec(0);
+      const interval = setInterval(() => {
+        setElapsedSec(parseFloat(((Date.now() - genStartRef.current) / 1000).toFixed(1)));
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [isGenerating]);
+
+  // Extract geometry for overlays
+  useEffect(() => {
+    if (!currentImgUrl) {
+      setGeometryData(null);
+      return;
+    }
+    let isCancelled = false;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      if (isCancelled) return;
+      try {
+        const geo = extractFullImageGeometry(
+          img,
+          width || img.naturalWidth || 800,
+          height || img.naturalHeight || 800,
+          landmarks || []
+        );
+        setGeometryData(geo);
+      } catch (e) {
+        console.warn('Failed to extract full image geometry:', e);
+      }
+    };
+    img.src = currentImgUrl;
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentImgUrl, width, height, landmarks]);
 
   const startPanRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const startOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -119,33 +166,15 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
       isDraggingSliderRef.current = false;
     };
 
-    if (isPanning || isDraggingSliderRef.current) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    }
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isPanning]);
 
-  // Reset zoom & pan when image changes
-  useEffect(() => {
-    setZoomLevel(100);
-    setPanOffset({ x: 0, y: 0 });
-  }, [currentImgUrl, width, height]);
-
-  // Window resize: reset zoom to 100% (Fit) and pan to center
-  useEffect(() => {
-    const handleResize = () => {
-      setZoomLevel(100);
-      setPanOffset({ x: 0, y: 0 });
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Keyboard shortcut listener: F for Focus Mode, Esc for Exit Focus Mode
+  // Focus mode toggle on 'F' key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -173,150 +202,94 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isFocusMode]);
 
+  // Keyboard navigation for view mode segmented control
+  const viewModesList: ResultViewMode[] = ['result', 'photo', 'side-by-side', 'wipe-slider', 'diff'];
+  const handleViewKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const idx = viewModesList.indexOf(viewMode);
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = viewModesList[(idx + 1) % viewModesList.length];
+        setViewMode(next);
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prev = viewModesList[(idx - 1 + viewModesList.length) % viewModesList.length];
+        setViewMode(prev);
+      }
+    },
+    [viewMode, viewModesList]
+  );
+
   const isEmpty = !currentImgUrl;
 
+  // Single source caption under picture: e.g. "Painting · High · 77 paths · 1.1 MB gz · 1200x1600"
+  const modeTitle = mode === 'recreation' ? 'Exact copy' : 'Painting';
+  const qualityTitle = quality === 'high' ? 'High' : quality === 'medium' ? 'Medium' : 'Low';
+  const pathsText = sizeStats ? `${sizeStats.pathCount.toLocaleString()} paths` : '0 paths';
+  const gzText = sizeStats && sizeStats.formattedGzip ? `${sizeStats.formattedGzip} gz` : '0 KB gz';
+  const dimsText = width > 0 && height > 0 ? `${width}x${height}` : '';
+  const captionText = `${modeTitle} · ${qualityTitle} · ${pathsText} · ${gzText}${dimsText ? ` · ${dimsText}` : ''}`;
+
   return (
-    <div className="v4-result-section">
-      {/* 1. Atelier Sub-toolbar */}
-      <div className="v4-pane-toolbar">
-        <div className="v4-pane-toolbar__left">
-          <div className="v4-segmented-group">
-            <button
-              className={`v4-segmented-item ${viewMode === 'result' ? 'is-active' : ''}`}
-              onClick={() => setViewMode('result')}
-              title={mode === 'recreation' ? 'Vector recreation output' : 'Vector painting output'}
-            >
-              <span>{mode === 'recreation' ? 'Recreation' : 'Painting'}</span>
-            </button>
-
-            <button
-              className={`v4-segmented-item ${viewMode === 'photo' ? 'is-active' : ''}`}
-              onClick={() => setViewMode('photo')}
-              title="Original photograph input"
-            >
-              <span>Original photo</span>
-            </button>
-
-            <button
-              className={`v4-segmented-item ${viewMode === 'side-by-side' ? 'is-active' : ''}`}
-              onClick={() => setViewMode('side-by-side')}
-              title="Side-by-side comparison"
-            >
-              <span>Side-by-side</span>
-            </button>
-
-            <button
-              className={`v4-segmented-item ${viewMode === 'wipe-slider' ? 'is-active' : ''}`}
-              onClick={() => setViewMode('wipe-slider')}
-              title="Interactive wipe slider"
-            >
-              <span>Slider</span>
-            </button>
-
-            <button
-              className={`v4-segmented-item ${viewMode === 'diff' ? 'is-active' : ''}`}
-              onClick={() => setViewMode('diff')}
-              title="Difference error map"
-            >
-              <span>Diff view</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="v4-pane-toolbar__right">
-          <button className="v4-btn" style={{ padding: '0 8px' }} onClick={handleZoomOut} title="Zoom out">
-            -
-          </button>
-
-          <span
-            style={{
-              fontSize: '13px',
-              color: 'var(--paper-dim)',
-              minWidth: '40px',
-              textAlign: 'center',
-              fontFamily: 'var(--font-mono)',
-            }}
-          >
-            {zoomLevel}%
-          </span>
-
-          <button className="v4-btn" style={{ padding: '0 8px' }} onClick={handleZoomIn} title="Zoom in">
-            +
-          </button>
-
-          <button className="v4-btn" onClick={handleResetFit} title="Reset zoom to 100%">
-            <span>Fit</span>
-          </button>
-
-          <button
-            className={`v4-btn ${isFocusMode ? 'v4-btn--accent' : ''}`}
-            onClick={() => setIsFocusMode(!isFocusMode)}
-            title={`Focus mode (F) — view ${mode === 'recreation' ? 'recreation' : 'painting'} full-screen`}
-          >
-            <span>Focus</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Two-Quality Card Selector Bar (Painting & Recreation Modes) */}
-      {tiers && (
+    <div className={`v4-result-section ${isFocusMode ? 'is-focus-mode' : ''}`}>
+      {/* 1. Atelier Result Header: Segmented view switcher left, Inspect v popover right */}
+      <div className="v4-result-header">
         <div
-          className="v4-tier-cards-bar"
-          style={{
-            display: 'flex',
-            gap: '8px',
-            padding: '6px 12px',
-            background: 'var(--panel-alt, #0f172a)',
-            borderBottom: '1px solid var(--border-soft, #1e293b)',
-            alignItems: 'center',
-            overflowX: 'auto',
-          }}
+          className="v4-segmented-group"
+          role="tablist"
+          aria-label="Result View Mode"
+          onKeyDown={handleViewKeyDown}
         >
-          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {mode === 'painting' ? 'Painting Quality:' : 'Recreation Quality:'}
-          </span>
-          {[
-            {
-              id: 'high',
-              label: 'High Quality',
-              data: tiers.high || tiers.tier1,
-              desc: mode === 'painting' ? 'Detailed digital portrait painting: fine planes and subtle shading' : 'High-fidelity photographic vector copy: dedicated tones and fine contours',
-            },
-            {
-              id: 'low',
-              label: 'Low Quality',
-              data: tiers.low || tiers.tier2,
-              desc: mode === 'painting' ? 'Balanced painterly brushwork: fast load, preserved likeness' : 'Compact vector reconstruction: preserved structure and reasonable color fidelity',
-            },
-          ].map((t) => {
-            const isSelected = selectedTier === t.id || (t.id === 'high' && selectedTier === 'tier1') || (t.id === 'low' && (selectedTier === 'tier2' || selectedTier === 'tier3'));
-            return (
-              <button
-                key={t.id}
-                onClick={() => onSelectTier?.(t.id as any)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 10px',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  border: isSelected ? '1px solid var(--accent, #3b82f6)' : '1px solid var(--border-soft, #334155)',
-                  background: isSelected ? 'rgba(59, 130, 246, 0.2)' : 'rgba(30, 41, 59, 0.5)',
-                  color: isSelected ? '#93c5fa' : '#cbd5e1',
-                }}
-                title={t.desc}
-              >
-                <strong>{t.label}</strong>
-                <span style={{ color: '#94a3b8' }}>
-                  {(t.data?.gzipBytes ? t.data.gzipBytes / 1024 : 0).toFixed(1)} KB gz · {t.data?.pathCount || 0} paths
-                </span>
-              </button>
-            );
-          })}
+          <button
+            className={`v4-segmented-item ${viewMode === 'result' ? 'is-active' : ''}`}
+            onClick={() => setViewMode('result')}
+            title="Result vector output"
+            tabIndex={0}
+          >
+            <span>Result</span>
+          </button>
+          <button
+            className={`v4-segmented-item ${viewMode === 'photo' ? 'is-active' : ''}`}
+            onClick={() => setViewMode('photo')}
+            title="Original source photograph"
+            tabIndex={0}
+          >
+            <span>Original</span>
+          </button>
+          <button
+            className={`v4-segmented-item ${viewMode === 'side-by-side' ? 'is-active' : ''}`}
+            onClick={() => setViewMode('side-by-side')}
+            title="Side-by-side visual comparison"
+            tabIndex={0}
+          >
+            <span>Side by side</span>
+          </button>
+          <button
+            className={`v4-segmented-item ${viewMode === 'wipe-slider' ? 'is-active' : ''}`}
+            onClick={() => setViewMode('wipe-slider')}
+            title="Interactive before/after wipe slider"
+            tabIndex={0}
+          >
+            <span>Wipe</span>
+          </button>
+          <button
+            className={`v4-segmented-item ${viewMode === 'diff' ? 'is-active' : ''}`}
+            onClick={() => setViewMode('diff')}
+            title="Difference error map"
+            tabIndex={0}
+          >
+            <span>Diff</span>
+          </button>
         </div>
-      )}
+
+        {/* Inspect popover menu with radio items */}
+        <InspectPopover
+          activeMode={overlayMode}
+          onModeChange={setOverlayMode}
+          hasLandmarks={Boolean(landmarks && landmarks.length > 0)}
+          hasSvgPaths={Boolean(layers && layers.length > 0)}
+        />
+      </div>
 
       {/* 2. Paper-Grain Viewport Canvas Area */}
       <div
@@ -335,8 +308,36 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
               : 'default',
         }}
       >
-        {isEmpty ? (
-          /* Empty State */
+        {/* Floating Zoom Bar inside result area (Bottom-Right) */}
+        {!isEmpty && !isGenerating && (
+          <div className="v4-floating-zoom-bar" role="toolbar" aria-label="Zoom controls">
+            <button className="v4-btn v4-btn--icon" onClick={handleZoomOut} title="Zoom out">
+              -
+            </button>
+            <span className="v4-zoom-level mono">{zoomLevel}%</span>
+            <button className="v4-btn v4-btn--icon" onClick={handleZoomIn} title="Zoom in">
+              +
+            </button>
+            <button className="v4-btn v4-btn--sm" onClick={handleResetFit} title="Reset zoom to 100%">
+              Fit
+            </button>
+            <button
+              className={`v4-btn v4-btn--sm ${isFocusMode ? 'v4-btn--accent' : ''}`}
+              onClick={() => setIsFocusMode(!isFocusMode)}
+              title="Toggle focus mode (F)"
+            >
+              Focus
+            </button>
+          </div>
+        )}
+
+        {/* State A: While generating: show static text only ("Generating... 4.2s"). Never show previous photo. */}
+        {isGenerating ? (
+          <div className="v4-generating-box mono">
+            <span>Generating... {elapsedSec.toFixed(1)}s</span>
+          </div>
+        ) : isEmpty ? (
+          /* State B: Empty State (Dashed drop zone) */
           <div
             className={`atelier-frame atelier-frame--empty ${isDraggingFile ? 'is-drag-over' : ''}`}
             onClick={onDropAreaClick}
@@ -346,172 +347,82 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
             <div className="atelier-crop-mark atelier-crop-mark--bl" />
             <div className="atelier-crop-mark atelier-crop-mark--br" />
 
-            <div className="atelier-empty-text">Drop a photo. We'll {mode === 'recreation' ? 'recreate' : 'paint'} it in code.</div>
-            <div className="atelier-empty-subtext">or click to browse local files</div>
+            <div className="atelier-empty-text mono">Drop a photo or click to upload</div>
           </div>
         ) : (
-          /* Populated State */
+          /* State C: Populated Viewport with L-shaped crop marks */
           <div className={`atelier-frame ${isDraggingFile ? 'is-drag-over' : ''}`}>
             <div className="atelier-crop-mark atelier-crop-mark--tl" />
             <div className="atelier-crop-mark atelier-crop-mark--tr" />
             <div className="atelier-crop-mark atelier-crop-mark--bl" />
             <div className="atelier-crop-mark atelier-crop-mark--br" />
 
-            {/* Picture Content: Zoom and Pan apply strictly to this inner container */}
-            <div className="atelier-frame-content" style={{ position: 'relative' }}>
-
-{/* Canvas Progressive Brush Scanner Loading Animation */}
-{isGenerating && (
-  <div
-    style={{
-      position: 'absolute',
-      inset: 0,
-      zIndex: 10,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      pointerEvents: 'none',
-      overflow: 'hidden',
-      borderRadius: '2px',
-    }}
-  >
-    <style>{`
-      @keyframes v4SweepDown {
-        0% { top: 0%; opacity: 0.9; }
-        50% { opacity: 1; }
-        100% { top: 98%; opacity: 0.9; }
-      }
-      @keyframes v4WiggleBrush {
-        0% { transform: translate(-50%, -50%) rotate(-15deg); }
-        100% { transform: translate(-50%, -50%) rotate(15deg); }
-      }
-    `}</style>
-    {/* Sweeping Golden Light Line */}
-    <div
-      style={{
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        height: '3px',
-        background: 'linear-gradient(90deg, transparent, rgba(245,158,11,0.2) 15%, #F59E0B 50%, rgba(245,158,11,0.2) 85%, transparent)',
-        boxShadow: '0 0 16px 3px rgba(245, 158, 11, 0.75)',
-        animation: 'v4SweepDown 2.4s ease-in-out infinite alternate',
-      }}
-    >
-      {/* Animated Paintbrush Traveler */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '-16px',
-          left: '50%',
-          fontSize: '24px',
-          filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.85))',
-          animation: 'v4WiggleBrush 0.6s ease-in-out infinite alternate',
-        }}
-      >
-        🖌️
-      </div>
-    </div>
-    {/* Chic Floating Status Pill */}
-    <div
-      style={{
-        position: 'absolute',
-        bottom: '24px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '6px 14px',
-        background: 'rgba(15, 23, 42, 0.88)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(245, 158, 11, 0.5)',
-        borderRadius: '20px',
-        color: '#F8FAFC',
-        fontSize: '12px',
-        fontFamily: 'monospace',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
-      }}
-    >
-      <span
-        style={{
-          width: '8px',
-          height: '8px',
-          borderRadius: '50%',
-          backgroundColor: '#F59E0B',
-          boxShadow: '0 0 10px #F59E0B',
-        }}
-      />
-      <span>
-        {mode === 'recreation' ? 'Recreating photographic contours…' : 'Painting digital brushwork planes…'}
-      </span>
-    </div>
-  </div>
-)}
+            {/* Picture Content: Zoom and Pan apply strictly to inner container */}
+            <div className="atelier-frame-content">
               <div
                 className="atelier-zoom-container"
                 style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
                   transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel / 100})`,
                   transformOrigin: 'center center',
                   transition: isPanning ? 'none' : 'transform 0.1s ease-out',
                 }}
               >
-                {/* A. Painting Result: Photo initially, instant SVG swap when ready. Nothing else moves. */}
+                {/* 1. Result View (SVG if ready, photo fallback) */}
                 {viewMode === 'result' && (
-                  <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div className="v4-preview-wrapper">
                     {effectiveSvgUrl ? (
                       <img
                         src={effectiveSvgUrl}
-                        alt="Vector painting result"
+                        alt="Vector reconstruction result"
                         className="v4-preview-img"
                         draggable={false}
                       />
-                    ) : currentImgUrl ? (
+                    ) : (
                       <img
                         src={currentImgUrl}
                         alt="Original photograph"
                         className="v4-preview-img"
                         draggable={false}
                       />
-                    ) : (
-                      <div
-                        style={{
-                          padding: '60px 40px',
-                          color: 'var(--paper-dim)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '12px',
-                          fontFamily: 'var(--font-serif)',
-                          fontSize: '20px',
-                          fontStyle: 'italic',
-                        }}
-                      >
-                        <span>{isGenerating ? 'Working…' : 'Choose a photo'}</span>
-                      </div>
                     )}
+                    <GeometryOverlay
+                      width={width || 800}
+                      height={height || 600}
+                      mode={overlayMode}
+                      geometryData={geometryData}
+                      landmarks={landmarks}
+                      svgPaths={layers}
+                      accentColor={accentColor}
+                    />
                   </div>
                 )}
 
-                {/* B. Original Photo */}
+                {/* 2. Original Photo View */}
                 {viewMode === 'photo' && (
-                  <img
-                    src={currentImgUrl}
-                    alt="Original photograph"
-                    className="v4-preview-img"
-                    draggable={false}
-                  />
+                  <div className="v4-preview-wrapper">
+                    <img
+                      src={currentImgUrl}
+                      alt="Original photograph"
+                      className="v4-preview-img"
+                      draggable={false}
+                    />
+                    <GeometryOverlay
+                      width={width || 800}
+                      height={height || 600}
+                      mode={overlayMode}
+                      geometryData={geometryData}
+                      landmarks={landmarks}
+                      svgPaths={layers}
+                      accentColor={accentColor}
+                    />
+                  </div>
                 )}
 
-                {/* C. Side-by-Side */}
+                {/* 3. Side-by-Side View */}
                 {viewMode === 'side-by-side' && (
                   <div className="v4-side-by-side-wrap">
                     <div className="v4-side-pane">
-                      <span className="v4-side-pane__label">Original photo</span>
+                      <span className="v4-side-pane__label mono">Original</span>
                       <img
                         src={currentImgUrl}
                         alt="Original photograph"
@@ -520,24 +431,24 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                       />
                     </div>
                     <div className="v4-side-pane">
-                      <span className="v4-side-pane__label">{mode === 'recreation' ? 'Recreation' : 'Painting'}</span>
+                      <span className="v4-side-pane__label mono">Result</span>
                       {effectiveSvgUrl ? (
                         <img
                           src={effectiveSvgUrl}
-                          alt="Vector painting"
+                          alt="Vector reconstruction"
                           className="v4-preview-img"
                           draggable={false}
                         />
                       ) : (
-                        <div style={{ color: 'var(--paper-dim)' }}>
-                          {isGenerating ? 'Working…' : mode === 'recreation' ? 'Recreation not yet generated' : 'Painting not yet generated'}
+                        <div style={{ color: 'var(--paper-dim)' }} className="mono">
+                          Output not yet generated
                         </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* D. Wipe Slider */}
+                {/* 4. Wipe Slider View */}
                 {viewMode === 'wipe-slider' && (
                   <div className="v4-wipe-slider-wrap" ref={sliderWrapRef}>
                     <img
@@ -553,7 +464,7 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                       {effectiveSvgUrl ? (
                         <img
                           src={effectiveSvgUrl}
-                          alt="Vector painting"
+                          alt="Vector result"
                           className="v4-wipe-image-base"
                           draggable={false}
                         />
@@ -567,7 +478,7 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                   </div>
                 )}
 
-                {/* E. Diff View */}
+                {/* 5. Diff View */}
                 {viewMode === 'diff' &&
                   (diffBlobUrl ? (
                     <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -577,25 +488,10 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                         className="v4-preview-img"
                         draggable={false}
                       />
-                      <div
-                        style={{
-                          position: 'absolute',
-                          bottom: 12,
-                          backgroundColor: 'var(--ink)',
-                          border: '1px solid var(--line)',
-                          padding: '4px 10px',
-                          fontSize: '12px',
-                          color: 'var(--paper-dim)',
-                          pointerEvents: 'none',
-                        }}
-                      >
-                        <span style={{ color: 'var(--paper)' }}>Dark</span> = match &nbsp;|&nbsp;{' '}
-                        <span style={{ color: 'var(--accent)' }}>Bright</span> = variance (amplified 2.2×)
-                      </div>
                     </div>
                   ) : (
-                    <div style={{ padding: '40px', color: 'var(--paper-dim)' }}>
-                      {isGenerating ? 'Measuring variance…' : 'No difference map available'}
+                    <div style={{ color: 'var(--paper-dim)' }} className="mono">
+                      Difference map will be calculated when reconstruction completes.
                     </div>
                   ))}
               </div>
@@ -604,55 +500,12 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
         )}
       </div>
 
-      {/* 3. One-line caption (file name small and dim, pixel size next to it) */}
-      <div className="atelier-caption">
-        <span className="atelier-caption-filename">{fileName}</span>
-        <span className="atelier-caption-dims">{width} × {height} px</span>
+      {/* 3. Result Caption: Plain mono text, one line, truncates with ellipsis and full text in tooltip */}
+      <div className="v4-result-caption mono" title={captionText}>
+        <span>{captionText}</span>
       </div>
-
-      {/* 4. Focus Mode Overlay (Full screen with pure painting view) */}
-      {isFocusMode && (
-        <div className="v4-focus-mode" role="dialog" aria-label="Focus mode">
-          <div className="v4-focus-header">
-            <span className="v4-focus-title">Focus Mode</span>
-            <span className="v4-focus-hint">Press Esc or F to exit</span>
-            <button
-              className="v4-btn"
-              onClick={() => setIsFocusMode(false)}
-              title="Exit focus mode (Esc or F)"
-            >
-              <span>✕</span>
-            </button>
-          </div>
-
-          <div className="v4-focus-viewport">
-            <div className="atelier-frame">
-              <div className="atelier-crop-mark atelier-crop-mark--tl" />
-              <div className="atelier-crop-mark atelier-crop-mark--tr" />
-              <div className="atelier-crop-mark atelier-crop-mark--bl" />
-              <div className="atelier-crop-mark atelier-crop-mark--br" />
-
-              <div className="atelier-frame-content">
-                {effectiveSvgUrl ? (
-                  <img
-                    src={effectiveSvgUrl}
-                    alt="Vector painting result"
-                    className="v4-preview-img"
-                    draggable={false}
-                  />
-                ) : currentImgUrl ? (
-                  <img
-                    src={currentImgUrl}
-                    alt="Original photograph"
-                    className="v4-preview-img"
-                    draggable={false}
-                  />
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
+
+export default V4ResultPane;

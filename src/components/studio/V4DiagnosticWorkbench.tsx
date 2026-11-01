@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Upload } from 'lucide-react';
 import { runV4Pipeline } from '../../engine/v4/v4Pipeline';
 import { V4PipelineResult, V4ExperimentOptions, WorkbenchStatus } from '../../engine/v4/types';
 import { QualitySetting, AllQualitiesResult } from '../../engine/v4/tiers';
+import { computeSvgSizeStats, SvgSizeStats } from '../../utils/svgDiagnostics';
 import { faceDetectionService, NormalizedLandmark } from '../../services/faceDetection';
 import { SegmentationService } from '../../services/segmentation/segmentationService';
 import { V4CodeEditor } from './v4/V4CodeEditor';
 import { V4ResultPane } from './v4/V4ResultPane';
-import { V4Terminal, TerminalLog, FinalSummaryData } from './v4/V4Terminal';
+import { TerminalLog, FinalSummaryData } from './v4/V4Terminal';
 import { V4ExportModal } from './v4/V4ExportModal';
 import { V4Toast, ToastItem } from './v4/V4Toast';
 import V4PipelineWorker from '../../workers/v4PipelineWorker.ts?worker';
@@ -35,7 +36,6 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
 }) => {
   // Check query parameters
   const searchStr = typeof window !== 'undefined' ? window.location.search + window.location.hash : '';
-  const isDevMode = searchStr.includes('dev=1');
   const startEmpty = searchStr.includes('empty=1');
   const startDrag = searchStr.includes('drag=1');
 
@@ -52,9 +52,10 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
     return "photo.jpg";
   });
 
-  // Two-Mode and Two-Quality Architecture State
-  const [selectedQuality, setSelectedQuality] = useState<QualitySetting>('high');
+  // Two-Mode and Three-Quality Architecture State
+  const [selectedQuality, setSelectedQuality] = useState<'low' | 'medium' | 'high'>('high');
   const [tiersData, setTiersData] = useState<AllQualitiesResult | null>(null);
+  const [sizeStats, setSizeStats] = useState<SvgSizeStats | null>(null);
 
   // Sync filename when prop changes
   useEffect(() => {
@@ -83,7 +84,7 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
   const isPaintingActive = workbenchStatus === 'painting';
   const [generationStage, setGenerationStage] = useState<string>('Ready');
   const [progressPercent, setProgressPercent] = useState<number>(0);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [, setErrorMsg] = useState<string | null>(null);
 
   // SVGs & sandboxed blob URL
   const [originalSvg, setOriginalSvg] = useState<string>('');
@@ -107,25 +108,38 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
   const [isExportOpen, setIsExportOpen] = useState<boolean>(false);
   const [activeMobileTab, setActiveMobileTab] = useState<'code' | 'result' | 'terminal'>('result');
   const [isDraggingFile, setIsDraggingFile] = useState<boolean>(startDrag);
-  const [debugMagentaBase, setDebugMagentaBase] = useState<boolean>(() => flags.debugMagentaBase);
+  const [debugMagentaBase] = useState<boolean>(() => flags.debugMagentaBase);
   const debugMagentaBaseRef = useRef<boolean>(flags.debugMagentaBase);
   debugMagentaBaseRef.current = debugMagentaBase;
 
-  // Resizable pane widths and heights
-  const [leftPanePercent, setLeftPanePercent] = useState<number>(45); // Left code editor %
-  const [resultPanePercent, setResultPanePercent] = useState<number>(60); // Right top result %
+  // Resizable pane widths (Default 45% code / 55% result)
+  const [leftPanePercent, setLeftPanePercent] = useState<number>(45);
+  const [editorTab, setEditorTab] = useState<'svg' | 'html' | 'jsx' | 'diagnostics'>('diagnostics');
   const [isDraggingCol, setIsDraggingCol] = useState<boolean>(false);
-  const [isDraggingRow, setIsDraggingRow] = useState<boolean>(false);
 
-  // Step 1 - 5: Painting Animation & Palette Strip State
+  // Unified SVG size stats computation for caption and status bar
+  useEffect(() => {
+    let isCancelled = false;
+    if (!currentSvg) {
+      setSizeStats(null);
+      return;
+    }
+    computeSvgSizeStats(currentSvg).then((stats) => {
+      if (!isCancelled) {
+        setSizeStats(stats);
+      }
+    });
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentSvg]);
+
+  // Step 1 - 5: Painting Layers & Landmarks
   const [paintingLayers, setPaintingLayers] = useState<PaintingLayer[]>([]);
   const [detectedLandmarks, setDetectedLandmarks] = useState<NormalizedLandmark[]>([]);
-  const [activeIsolatedLayerId, setActiveIsolatedLayerId] = useState<string | null>(null);
-  const [targetScrollLayerId, setTargetScrollLayerId] = useState<string | null>(null);
 
-  // Step 3: Floating Toasts & Collapsible Terminal State
+  // Step 3: Floating Toasts
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const [isTerminalCollapsed, setIsTerminalCollapsed] = useState<boolean>(true);
 
   const showToast = useCallback((message: string, type: 'info' | 'success' | 'warn' | 'error' = 'info') => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -167,7 +181,7 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
 
       if (e.key === 'l' || e.key === 'L') {
         e.preventDefault();
-        setIsTerminalCollapsed((prev) => !prev);
+        setEditorTab((prev) => (prev === 'diagnostics' ? 'html' : 'diagnostics'));
       }
     };
 
@@ -209,8 +223,13 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
 
   // Window exposure for debugging & Playwright assertions
   useEffect(() => {
-    
-  }, [workbenchStatus, currentSvg, originalSvg]);
+    (window as any).__v4 = {
+      status: workbenchStatus,
+      stage: generationStage,
+      hasSvg: Boolean(currentSvg),
+      svgLen: currentSvg ? currentSvg.length : 0,
+    };
+  }, [workbenchStatus, generationStage, currentSvg]);
 
   const clearWatchdog = useCallback(() => {
     if (watchdogTimerRef.current) {
@@ -224,6 +243,12 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
     (nextStatus: WorkbenchStatus, reason?: string) => {
       setWorkbenchStatus(nextStatus);
       statusRef.current = nextStatus;
+
+      if (nextStatus === 'analyzing' || nextStatus === 'painting') {
+        setEditorTab('diagnostics');
+      } else if (nextStatus === 'done' || nextStatus === 'skipped') {
+        setEditorTab('html');
+      }
 
       const isTerminal =
         nextStatus === 'done' ||
@@ -569,8 +594,8 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
 
         const pipelineOptions: V4ExperimentOptions = {
           mode: activeMode,
-          quality: activeQuality,
-          selectedTier: activeQuality,
+          quality: (activeQuality === 'low' ? 'low' : 'high'),
+          selectedTier: (activeQuality === 'low' ? 'low' : 'high'),
           detailPreset: activeQuality === 'high' ? 'max' : 'medium',
           detectedFaceCount: faceCount,
           allFacesLandmarks,
@@ -852,13 +877,18 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
     [addLog, transitionToStatus]
   );
 
-  // Handle Quality Selection: High vs Low (Instantly updates view from analysis)
+  // Handle Quality Selection: Low vs Medium vs High
   const handleQualitySelect = useCallback(
-    (q: QualitySetting) => {
+    (q: 'low' | 'medium' | 'high') => {
       setSelectedQuality(q);
       if (!tiersData) return;
 
-      const targetData = q === 'low' ? (tiersData.low || tiersData.tier2) : (tiersData.high || tiersData.tier1);
+      const targetData =
+        q === 'low'
+          ? (tiersData.low || tiersData.tier3 || tiersData.tier2)
+          : q === 'medium'
+          ? ((tiersData as any).medium || tiersData.tier2 || tiersData.high || tiersData.tier1)
+          : (tiersData.high || tiersData.tier1);
       const targetSvg = targetData?.svgString;
 
       if (targetSvg) {
@@ -880,6 +910,39 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
     [tiersData]
   );
 
+  const handleModeSelect = useCallback(
+    (newMode: 'painting' | 'recreation') => {
+      setWorkbenchMode(newMode);
+      if (currentImgUrl) {
+        const backendQuality: QualitySetting = selectedQuality === 'medium' ? 'high' : selectedQuality;
+        processImage(currentImgUrl, 'max', currentFileName, newMode, backendQuality);
+      }
+    },
+    [currentImgUrl, currentFileName, selectedQuality, processImage]
+  );
+
+  const handleModeKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const nextMode = workbenchMode === 'painting' ? 'recreation' : 'painting';
+      handleModeSelect(nextMode);
+    }
+  };
+
+  const qualitiesList: ('low' | 'medium' | 'high')[] = ['low', 'medium', 'high'];
+  const handleQualityKeyDown = (e: React.KeyboardEvent) => {
+    const curIdx = qualitiesList.indexOf(selectedQuality);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const next = qualitiesList[(curIdx + 1) % qualitiesList.length];
+      handleQualitySelect(next);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prev = qualitiesList[(curIdx - 1 + qualitiesList.length) % qualitiesList.length];
+      handleQualitySelect(prev);
+    }
+  };
+
   // Unified photo selection handler (Step 1: Immediately show new photo, clear old results/state, cancel old run)
   const handlePhotoSelection = useCallback(
     (url: string, name: string) => {
@@ -894,8 +957,6 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
       setDiffBlobUrl(null);
       setPaintingLayers([]);
       setDetectedLandmarks([]);
-      setActiveIsolatedLayerId(null);
-      setTargetScrollLayerId(null);
       setSummaryData(null);
       setColorMetrics({});
       setLogs([]);
@@ -959,38 +1020,23 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
   );
 
   
-  // Handle Skip Animation (Step 2: Can be pressed in-flight or before first picture)
-  const handleSkipAnimation = useCallback(() => {
-    skipRequestedRunIdRef.current = currentRunIdRef.current;
-    addLog('[Animation] skipped by user.', 'info', currentRunIdRef.current);
-    transitionToStatus('skipped', 'User skipped animation');
-    setIsTerminalCollapsed(true);
-  }, [addLog, transitionToStatus]);
-
-  // Draggable Vertical & Horizontal Dividers
+  // Draggable Vertical Divider
   const handleColMouseDown = () => setIsDraggingCol(true);
-  const handleRowMouseDown = () => setIsDraggingRow(true);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isDraggingCol && workspaceRef.current) {
         const rect = workspaceRef.current.getBoundingClientRect();
-        const newPercent = Math.max(25, Math.min(75, ((e.clientX - rect.left) / rect.width) * 100));
+        const newPercent = Math.max(30, Math.min(70, ((e.clientX - rect.left) / rect.width) * 100));
         setLeftPanePercent(newPercent);
-      }
-      if (isDraggingRow && rightPaneRef.current) {
-        const rect = rightPaneRef.current.getBoundingClientRect();
-        const newPercent = Math.max(30, Math.min(80, ((e.clientY - rect.top) / rect.height) * 100));
-        setResultPanePercent(newPercent);
       }
     };
 
     const handleMouseUp = () => {
       setIsDraggingCol(false);
-      setIsDraggingRow(false);
     };
 
-    if (isDraggingCol || isDraggingRow) {
+    if (isDraggingCol) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     }
@@ -998,7 +1044,7 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDraggingCol, isDraggingRow]);
+  }, [isDraggingCol]);
 
   return (
     <div
@@ -1031,126 +1077,162 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
         </div>
       )}
 
-      {/* 44px Atelier Header: Wordmark left, actions right */}
+      {/* 56px Atelier Header: Logo left, segmented controls, actions right */}
       <header className="v4-header">
         <div className="v4-header__left">
           <button
             className="v4-btn"
             onClick={onBackToStudio}
             title="Back to photo upload"
-            style={{ padding: '0 8px' }}
+            style={{ padding: '0 8px', height: '32px' }}
           >
             <ArrowLeft size={14} />
           </button>
 
-          <div className="v4-wordmark" onClick={onBackToStudio}>
-            Code<em className="v4-wordmark-face">Face</em>
+          <div className="v4-wordmark" onClick={onBackToStudio} title="CodeMyPicture">
+            <span className="v4-wordmark__code">Code</span>
+            <span className="v4-wordmark__my">My</span>
+            <span className="v4-wordmark__picture">Picture</span>
           </div>
         </div>
 
-        <div className="v4-header__right">
-          {/* Upload Button: plain text with thin border */}
+        <div className="v4-header__center">
+          {/* Mode Segmented Control: Exact copy | Painting */}
+          <div
+            className="v4-segmented-control"
+            role="tablist"
+            aria-label="Mode"
+            onKeyDown={handleModeKeyDown}
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={workbenchMode === 'recreation'}
+              className={`v4-segmented-control__item ${workbenchMode === 'recreation' ? 'is-active' : ''}`}
+              onClick={() => handleModeSelect('recreation')}
+              title="Exact vector recreation"
+              tabIndex={0}
+            >
+              Exact copy
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={workbenchMode === 'painting'}
+              className={`v4-segmented-control__item ${workbenchMode === 'painting' ? 'is-active' : ''}`}
+              onClick={() => handleModeSelect('painting')}
+              title="Stylized painting reconstruction"
+              tabIndex={0}
+            >
+              Painting
+            </button>
+          </div>
+
+          {/* Quality Segmented Control: Low | Medium | High */}
+          <div
+            className="v4-segmented-control"
+            role="tablist"
+            aria-label="Quality"
+            onKeyDown={handleQualityKeyDown}
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedQuality === 'low'}
+              className={`v4-segmented-control__item ${selectedQuality === 'low' ? 'is-active' : ''}`}
+              onClick={() => handleQualitySelect('low')}
+              title="Low quality / fast small payload"
+              tabIndex={0}
+            >
+              Low
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedQuality === 'medium'}
+              className={`v4-segmented-control__item ${selectedQuality === 'medium' ? 'is-active' : ''}`}
+              onClick={() => handleQualitySelect('medium')}
+              title="Medium quality balanced preset"
+              tabIndex={0}
+            >
+              Medium
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedQuality === 'high'}
+              className={`v4-segmented-control__item ${selectedQuality === 'high' ? 'is-active' : ''}`}
+              onClick={() => handleQualitySelect('high')}
+              title="High quality maximum fidelity"
+              tabIndex={0}
+            >
+              High
+            </button>
+          </div>
+        </div>
+
+        <div className="v4-header__right v4-header__right--desktop">
+          {/* Upload photo button: outlined secondary */}
           <button
             className="v4-btn"
             onClick={() => fileInputRef.current?.click()}
             title="Upload photo (or drag-and-drop anywhere)"
+            style={{ height: '32px' }}
           >
-            <span>Upload photo</span>
-          </button>
-          <select
-            className="v4-select"
-            value={workbenchMode}
-            onChange={(e) => {
-              const newMode = e.target.value as 'painting' | 'recreation';
-              setWorkbenchMode(newMode);
-              if (currentImgUrl) {
-                processImage(currentImgUrl, 'max', currentFileName, newMode, selectedQuality);
-              }
-            }}
-            title="Rendering Mode"
-          >
-            <option value="painting">Mode: Painting</option>
-            <option value="recreation">Mode: Recreation</option>
-          </select>
-
-          <select
-            className="v4-select"
-            value={selectedQuality}
-            onChange={(e) => {
-              const newQ = e.target.value as QualitySetting;
-              handleQualitySelect(newQ);
-            }}
-            title={workbenchMode === 'painting' ? 'Painting Quality: High or Low' : 'Recreation Quality: High or Low'}
-          >
-            <option value="high">Quality: High</option>
-            <option value="low">Quality: Low</option>
-          </select>
-          <button style={{ display: 'none' }}>
+            <Upload size={14} className="v4-btn--upload-icon" style={{ display: 'none' }} />
+            <span className="v4-btn--upload-text">Upload photo</span>
           </button>
 
-          {/* Dev Mode Test Photo Dropdown (Only when ?dev=1) */}
-          
-
-          {isDevMode && (
-            <label
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '11px',
-                color: debugMagentaBase ? '#FF00FF' : 'var(--pencil)',
-                cursor: 'pointer',
-                userSelect: 'none',
-                padding: '2px 6px',
-                border: '1px solid var(--border-soft)',
-                borderRadius: '3px',
-              }}
-              title="Step 1 Debug: Set base layer to bright magenta (#FF00FF) to distinguish holes from noise specks"
-            >
-              <input
-                type="checkbox"
-                checked={debugMagentaBase}
-                onChange={(e) => {
-                  const val = e.target.checked;
-                  setDebugMagentaBase(val);
-                  if (currentImgUrl) {
-                    processImage(currentImgUrl, 'max', currentFileName);
-                  }
-                }}
-              />
-              <span>Magenta Base</span>
-            </label>
-          )}
-
-          {/* "Use this code" (formerly Export & Embed) */}
+          {/* Use this code (formerly Export & Embed) */}
           <button
             className="v4-btn"
             onClick={() => setIsExportOpen(true)}
             disabled={!currentSvg}
-            title="Export code options"
+            title="Export code and raster formats"
+            style={{ height: '32px' }}
           >
             <span>Use this code</span>
           </button>
 
-          {errorMsg && (
-            <span style={{ color: 'var(--vermilion)', fontSize: '12px' }} title={errorMsg}>
-              {errorMsg.substring(0, 24)}…
-            </span>
-          )}
-
-          {/* Exactly one solid accent button on screen: "Paint it" */}
+          {/* Exactly one solid vermilion button on screen: "Generate" */}
           <button
-            className="v4-btn v4-btn--accent"
-            onClick={() => processImage(currentImgUrl, 'max', currentFileName)}
+            className="v4-btn v4-btn--generate"
+            onClick={() => {
+              const bq: QualitySetting = selectedQuality === 'medium' ? 'high' : selectedQuality;
+              processImage(currentImgUrl, 'max', currentFileName, workbenchMode, bq);
+            }}
             disabled={isGenerating || !currentImgUrl}
-            title={isGenerating ? generationStage : 'Paint vector portrait'}
+            title={isGenerating ? generationStage : 'Generate vector artwork'}
           >
-            <span>{isGenerating ? 'Working…' : workbenchMode === 'recreation' ? 'Recreate it' : 'Paint it'}</span>
+            <span>{isGenerating ? 'Generating...' : 'Generate'}</span>
           </button>
+        </div>
+
+        {/* Mobile Row 2 for native selects (< 768px) */}
+        <div className="v4-mobile-row-selects" style={{ display: 'none' }}>
+          <select
+            className="v4-select"
+            value={workbenchMode}
+            onChange={(e) => handleModeSelect(e.target.value as 'painting' | 'recreation')}
+            aria-label="Mode"
+          >
+            <option value="recreation">Exact copy</option>
+            <option value="painting">Painting</option>
+          </select>
+          <select
+            className="v4-select"
+            value={selectedQuality}
+            onChange={(e) => handleQualitySelect(e.target.value as 'low' | 'medium' | 'high')}
+            aria-label="Quality"
+          >
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
         </div>
       </header>
 
-      {/* Mobile Tabs Bar (< 1100px) */}
+      {/* Mobile Tabs Bar (< 768px) */}
       <div className="v4-mobile-tabs-bar">
         <button
           className={`v4-mobile-tab-btn ${activeMobileTab === 'code' ? 'is-active' : ''}`}
@@ -1162,19 +1244,13 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
           className={`v4-mobile-tab-btn ${activeMobileTab === 'result' ? 'is-active' : ''}`}
           onClick={() => setActiveMobileTab('result')}
         >
-          <span>Painting</span>
-        </button>
-        <button
-          className={`v4-mobile-tab-btn ${activeMobileTab === 'terminal' ? 'is-active' : ''}`}
-          onClick={() => setActiveMobileTab('terminal')}
-        >
-          <span>studio.log</span>
+          <span>Result</span>
         </button>
       </div>
 
-      {/* 2. TWO-PANE WORKSPACE */}
+      {/* 2. TWO-PANE WORKSPACE: LEFT = CODE PANEL, RIGHT = RESULT PANEL */}
       <main className="v4-workspace" ref={workspaceRef}>
-        {/* LEFT PANE: CODE EDITOR */}
+        {/* LEFT PANE: CODE EDITOR (FULL HEIGHT) */}
         <section
           className={`v4-left-pane ${activeMobileTab !== 'code' ? 'mobile-hidden' : ''}`}
           style={{ width: `${leftPanePercent}%` }}
@@ -1187,107 +1263,74 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
             height={imageDims.height}
             status={workbenchStatus}
             isStreaming={isGenerating || isPaintingActive}
-            targetScrollLayerId={targetScrollLayerId}
             onToast={showToast}
+            mode={workbenchMode}
+            quality={selectedQuality}
+            durationMs={summaryData?.durationMs}
+            colorMetrics={colorMetrics}
+            activeTab={editorTab}
+            onTabChange={setEditorTab}
+            logs={logs}
+            onClearLogs={() => setLogs([])}
+            progressPercent={progressPercent}
+            generationStage={generationStage}
+            onCancel={handleCancelGeneration}
+            sizeStats={sizeStats}
           />
         </section>
 
-        {/* Draggable Vertical Divider between Panes */}
+        {/* Draggable Vertical Divider between Panes (Double-click resets to 45/55) */}
         <div
           className={`v4-pane-divider ${isDraggingCol ? 'is-dragging' : ''}`}
           onMouseDown={handleColMouseDown}
-          title="Drag to resize panes"
+          onDoubleClick={() => setLeftPanePercent(45)}
+          title="Drag to resize panes (Double-click to reset 45% / 55%)"
         />
 
-        {/* RIGHT PANE: RESULT ON TOP, TERMINAL ON BOTTOM */}
+        {/* RIGHT PANE: RESULT / IMAGE VIEWPORT */}
         <section
-          className={`v4-right-pane ${activeMobileTab === 'code' ? 'mobile-hidden' : ''}`}
+          className={`v4-right-pane ${activeMobileTab !== 'result' ? 'mobile-hidden' : ''}`}
           ref={rightPaneRef}
           style={{ width: `calc(${100 - leftPanePercent}% - 5px)` }}
         >
-          {/* TOP RESULT SECTION */}
-          <div
-            className={`v4-result-section ${activeMobileTab === 'terminal' ? 'mobile-hidden' : ''}`}
-            style={{
-              height: isTerminalCollapsed ? 'calc(100% - 34px)' : `${resultPanePercent}%`,
-              transition: 'height 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
-          >
-            <V4ResultPane
-              currentImgUrl={currentImgUrl}
-              fileName={currentFileName}
-              tiers={tiersData}
-              selectedTier={selectedQuality}
-              onSelectTier={handleQualitySelect}
-              mode={workbenchMode}
-              svgBlobUrl={svgBlobUrl}
-              lastGoodBlobUrl={lastGoodBlobUrl}
-              diffBlobUrl={diffBlobUrl}
-              status={workbenchStatus}
-              isGenerating={isGenerating}
-              generationStage={generationStage}
-              progressPercent={progressPercent}
-              width={imageDims.width}
-              height={imageDims.height}
-              isDraggingFile={isDraggingFile}
-              onDropAreaClick={() => fileInputRef.current?.click()}
-              accentColor={photoAccent}
-              layers={paintingLayers}
-              landmarks={detectedLandmarks}
-              activeIsolatedLayerId={activeIsolatedLayerId}
-              onIsolateLayer={(id) => {
-                setActiveIsolatedLayerId(id);
-                setTargetScrollLayerId(id);
-              }}
-              isPaintingActive={isPaintingActive}
-              onSkipAnimation={handleSkipAnimation}
-              onReplayAnimation={() => transitionToStatus('painting')}
-              onPaintingFinished={() => {
-                transitionToStatus('done');
-                setIsTerminalCollapsed(true);
-              }}
-              onStageChange={(stage) => {
-                lastProgressTimeRef.current = Date.now();
-                addLog(`[Stage] ${stage}`, 'info');
-              }}
-            />
-          </div>
-
-          {/* Draggable Horizontal Divider between Result & Terminal (visible only when expanded) */}
-          {!isTerminalCollapsed && (
-            <div
-              className={`v4-horizontal-divider ${isDraggingRow ? 'is-dragging' : ''}`}
-              onMouseDown={handleRowMouseDown}
-              title="Drag to resize terminal"
-            />
-          )}
-
-          {/* BOTTOM TERMINAL SECTION */}
-          <div
-            className={`v4-terminal-section ${activeMobileTab === 'result' ? 'mobile-hidden' : ''} ${
-              isTerminalCollapsed ? 'is-collapsed' : ''
-            }`}
-            style={{
-              height: isTerminalCollapsed ? '34px' : `${100 - resultPanePercent}%`,
-              transition: 'height 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
-          >
-            <V4Terminal
-              mode={workbenchMode}
-              logs={logs}
-              onClearLogs={() => setLogs([])}
-              isGenerating={isGenerating}
-              progressPercent={progressPercent}
-              generationStage={generationStage}
-              onCancel={handleCancelGeneration}
-              colorMetrics={colorMetrics}
-              summaryData={summaryData}
-              isCollapsed={isTerminalCollapsed}
-              onToggleCollapse={() => setIsTerminalCollapsed((prev) => !prev)}
-            />
-          </div>
+          <V4ResultPane
+            currentImgUrl={currentImgUrl}
+            fileName={currentFileName}
+            mode={workbenchMode}
+            quality={selectedQuality}
+            svgBlobUrl={svgBlobUrl}
+            lastGoodBlobUrl={lastGoodBlobUrl}
+            diffBlobUrl={diffBlobUrl}
+            status={workbenchStatus}
+            isGenerating={isGenerating}
+            generationStage={generationStage}
+            progressPercent={progressPercent}
+            width={imageDims.width}
+            height={imageDims.height}
+            sizeStats={sizeStats}
+            isDraggingFile={isDraggingFile}
+            onDropAreaClick={() => fileInputRef.current?.click()}
+            accentColor={photoAccent}
+            layers={paintingLayers}
+            landmarks={detectedLandmarks}
+          />
         </section>
       </main>
+
+      {/* Mobile Sticky Generate Button (< 768px) */}
+      <div className="v4-mobile-sticky-generate-bar">
+        <button
+          className="v4-btn v4-btn--generate"
+          onClick={() => {
+            const bq: QualitySetting = selectedQuality === 'medium' ? 'high' : selectedQuality;
+            processImage(currentImgUrl, 'max', currentFileName, workbenchMode, bq);
+          }}
+          disabled={isGenerating || !currentImgUrl}
+          title={isGenerating ? generationStage : 'Generate vector artwork'}
+        >
+          <span>{isGenerating ? 'Generating...' : 'Generate'}</span>
+        </button>
+      </div>
 
       {/* 3. EXPORT & EMBED MODAL */}
       <V4ExportModal
