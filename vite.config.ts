@@ -9,6 +9,27 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
-    sourcemap: true,
+    sourcemap: false,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes('node_modules')) {
+            if (id.includes('@codemirror') || id.includes('codemirror') || id.includes('@lezer')) {
+              return 'vendor-codemirror';
+            }
+            if (id.includes('@mediapipe')) {
+              return 'vendor-mediapipe';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'vendor-react';
+            }
+          }
+        },
+      },
+    },
   },
 });

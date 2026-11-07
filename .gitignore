@@ -57,5 +57,6 @@ test-photos/
 *.mp4
 *.webm
 !public/*.png
+!public/*.webp
 !public/*.svg
 !public/*.ico

@@ -1,7 +1,11 @@
 import React from 'react';
 import { ShieldCheck, Cpu, HardDrive, Lock } from 'lucide-react';
 
-export const LocalPrivacySection: React.FC = () => {
+export interface LocalPrivacySectionProps {
+  onOpenPrivacy?: () => void;
+}
+
+export const LocalPrivacySection: React.FC<LocalPrivacySectionProps> = ({ onOpenPrivacy }) => {
   return (
     <section id="privacy" className="landing-section landing-privacy-section" aria-labelledby="privacy-heading">
       <div className="landing-privacy-banner">
@@ -17,6 +21,18 @@ export const LocalPrivacySection: React.FC = () => {
             CodeMyPicture operates entirely inside your local web browser session.
             We do not maintain remote processing servers, database storage, or external telemetry pipelines for your images.
           </p>
+          {onOpenPrivacy && (
+            <button
+              type="button"
+              onClick={onOpenPrivacy}
+              className="v4-btn"
+              style={{ marginTop: '14px', alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              title="Inspect zero-tracker privacy architecture and manage data preferences"
+            >
+              <ShieldCheck size={13} style={{ color: 'var(--moss)' }} />
+              <span>Inspect Privacy Architecture & Preferences</span>
+            </button>
+          )}
         </div>
 
         <div className="landing-privacy-points mono">

@@ -13,12 +13,15 @@ import { TechnicalFeaturesSection } from '../landing/TechnicalFeaturesSection';
 import { LocalPrivacySection } from '../landing/LocalPrivacySection';
 import { ExportFormatsSection } from '../landing/ExportFormatsSection';
 import { DiagnosticsInfoSection } from '../landing/DiagnosticsInfoSection';
+import { ContactSection } from '../landing/ContactSection';
+import analytics from '../../services/analytics';
 
 export interface UploadWorkflowProps {
   currentImage: ValidatedImage | null;
   onImageChange: (image: ValidatedImage | null) => void;
   onContinue: (detectionResult?: FaceDetectionResult, img?: HTMLImageElement) => void;
   isGenerating?: boolean;
+  onOpenPrivacy?: () => void;
 }
 
 export const UploadWorkflow: React.FC<UploadWorkflowProps> = ({
@@ -26,6 +29,7 @@ export const UploadWorkflow: React.FC<UploadWorkflowProps> = ({
   onImageChange,
   onContinue,
   isGenerating = false,
+  onOpenPrivacy,
 }) => {
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<UploadError | null>(null);
@@ -36,12 +40,16 @@ export const UploadWorkflow: React.FC<UploadWorkflowProps> = ({
     async (file: File) => {
       setIsValidating(true);
       setError(null);
+      analytics.trackEvent('upload_started');
 
       try {
         // Step 1: Pre-decoding validation (file existence, size limit, MIME, magic bytes)
         const validationResult = await validateImageFile(file);
 
         if (!validationResult.valid) {
+          analytics.trackEvent('image_validation_failed', {
+            error_code: validationResult.error.code,
+          });
           setError(validationResult.error);
           toast.error(validationResult.error.message);
           setIsValidating(false);
@@ -52,6 +60,9 @@ export const UploadWorkflow: React.FC<UploadWorkflowProps> = ({
         const loadResult = await loadImageFromFile(file, validationResult.mimeType);
 
         if (!loadResult.success) {
+          analytics.trackEvent('image_validation_failed', {
+            error_code: loadResult.error.code,
+          });
           setError(loadResult.error);
           toast.error(loadResult.error.message);
           setIsValidating(false);
@@ -64,6 +75,12 @@ export const UploadWorkflow: React.FC<UploadWorkflowProps> = ({
         }
 
         onImageChange(loadResult.image);
+        analytics.trackEvent('upload_completed', {
+          format: loadResult.image.mimeType.replace('image/', ''),
+          width: loadResult.image.width,
+          height: loadResult.image.height,
+          size_kb: Math.round(file.size / 1024),
+        });
         toast.success(`Photo loaded: ${file.name} (${loadResult.image.width} × ${loadResult.image.height} px)`);
       } catch (err) {
         console.error('Unhandled upload processing error:', err);
@@ -178,13 +195,16 @@ export const UploadWorkflow: React.FC<UploadWorkflowProps> = ({
           <TechnicalFeaturesSection />
 
           {/* Section 4: Verified Client-Side Privacy */}
-          <LocalPrivacySection />
+          <LocalPrivacySection onOpenPrivacy={onOpenPrivacy} />
 
           {/* Section 5: Available Export Formats */}
           <ExportFormatsSection />
 
           {/* Section 6: Studio Diagnostics & Technical Telemetry */}
           <DiagnosticsInfoSection />
+
+          {/* Section 7: Serverless Contact & Feedback Gateway */}
+          <ContactSection />
         </>
       )}
     </div>

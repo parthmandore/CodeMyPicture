@@ -20,6 +20,7 @@ import { detectBlackBars } from '../../utils/blackBarTrimmer';
 import { PaintingLayer, extractPaintingLayers, optimizeSvgDocument } from '../../engine/v4/svgOptimizer';
 import { minifySvgDocument } from '../../engine/v4/sizeOptimizer/svgMinifier';
 import flags from '../../flags';
+import analytics from '../../services/analytics';
 import '../../styles/v4workbench.css';
 
 
@@ -404,6 +405,14 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
         'info',
         runId
       );
+
+      const activeMode = overrideMode || workbenchMode;
+      const activeQuality = overrideQuality || selectedQuality;
+      analytics.trackEvent('reconstruction_started', {
+        mode: activeMode,
+        quality: activeQuality,
+        run_id: runId,
+      });
 
       try {
         const img = new Image();
@@ -864,6 +873,14 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
           `Vector synthesis complete: ${paths.toLocaleString()} paths generated`,
           'success'
         );
+        analytics.trackEvent('reconstruction_completed', {
+          mode: activeMode,
+          quality: activeQuality,
+          duration_ms: Math.round(totalDuration),
+          path_count: paths,
+          size_kb: Math.round(rawBytes / 1024),
+        });
+
         if (skipRequestedRunIdRef.current === runId) {
           transitionToStatus('skipped', 'User skipped animation');
         } else {
@@ -873,6 +890,10 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
         if (runId !== currentRunIdRef.current) return;
         console.error('V4 processing error:', err);
         const errMsg = err?.message || 'Error executing V4 pipeline';
+        analytics.trackEvent('reconstruction_failed', {
+          mode: activeMode,
+          quality: activeQuality,
+        });
         setErrorMsg(errMsg);
         addLog(`[Pipeline Error] ${errMsg}`, 'error', runId);
         showToast(`Generation error: ${errMsg}`, 'error');
@@ -900,6 +921,11 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
   const handleQualitySelect = useCallback(
     (q: 'low' | 'medium' | 'high') => {
       setSelectedQuality(q);
+      if (q === 'high') {
+        analytics.trackEvent('high_quality_selected');
+      } else if (q === 'low') {
+        analytics.trackEvent('low_quality_selected');
+      }
       if (!tiersData) return;
 
       const targetData =
@@ -932,6 +958,11 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
   const handleModeSelect = useCallback(
     (newMode: 'painting' | 'recreation') => {
       setWorkbenchMode(newMode);
+      if (newMode === 'painting') {
+        analytics.trackEvent('painting_mode_selected');
+      } else {
+        analytics.trackEvent('recreation_mode_selected');
+      }
       if (currentImgUrl) {
         const backendQuality: QualitySetting = selectedQuality === 'medium' ? 'high' : selectedQuality;
         processImage(currentImgUrl, 'max', currentFileName, newMode, backendQuality);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { ValidatedImage } from './types/upload';
 import { FaceDetectionResult } from './services/faceDetection/types';
 import { useFaceDetection } from './services/faceDetection';
@@ -7,18 +7,29 @@ import { Header } from './components/layout/Header';
 import { StepIndicator } from './components/studio/StepIndicator';
 import { UploadWorkflow } from './components/upload/UploadWorkflow';
 import { Footer } from './components/layout/Footer';
-import { V4DiagnosticWorkbench } from './components/studio/V4DiagnosticWorkbench';
-import { NotFoundPage } from './components/common/NotFoundPage';
+import { StudioInitSkeleton } from './components/common/Skeletons';
 import { ToastProvider } from './components/common/ToastContext';
+import { PrivacyModal } from './components/common/PrivacyModal';
+import { ConsentBanner } from './components/common/ConsentBanner';
 import { safeRevokeObjectURL } from './utils/imageLoader';
+import analytics from './services/analytics';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/components.css';
 import './styles/v4workbench.css';
 
+// Lazy-load heavy Studio Workbench and 404 route for optimal initial bundle splitting
+const V4DiagnosticWorkbench = lazy(() =>
+  import('./components/studio/V4DiagnosticWorkbench').then((m) => ({ default: m.V4DiagnosticWorkbench }))
+);
+const NotFoundPage = lazy(() =>
+  import('./components/common/NotFoundPage').then((m) => ({ default: m.NotFoundPage }))
+);
+
 export const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<'upload' | 'studio' | 'not-found'>('upload');
   const [currentImage, setCurrentImage] = useState<ValidatedImage | null>(null);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
 
   // Initialize MediaPipe engines eagerly in background
   const { state: engineState, initialize: initEngine } = useFaceDetection(true);
@@ -67,6 +78,18 @@ export const AppContent: React.FC = () => {
     });
   }, []);
 
+  // Track page views upon view navigation
+  useEffect(() => {
+    const pagePath = currentView === 'studio' ? '/#studio' : currentView === 'not-found' ? '/404' : '/';
+    const pageTitle =
+      currentView === 'studio'
+        ? 'Studio Workbench — CodeMyPicture'
+        : currentView === 'not-found'
+        ? '404 Not Found — CodeMyPicture'
+        : 'CodeMyPicture — In-Browser Vector Reconstruction';
+    analytics.trackPageView(pagePath, pageTitle);
+  }, [currentView]);
+
   // Clean up object URL when app unmounts
   useEffect(() => {
     return () => {
@@ -100,12 +123,14 @@ export const AppContent: React.FC = () => {
 
   if (currentView === 'not-found') {
     return (
-      <NotFoundPage
-        onReturnHome={() => {
-          window.history.pushState(null, '', '/');
-          setCurrentView('upload');
-        }}
-      />
+      <Suspense fallback={<div className="studio-fallback-loader mono" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--ink)', color: 'var(--paper-dim)', fontSize: '12px' }}>ROUTING EXCEPTION // INITIALIZING...</div>}>
+        <NotFoundPage
+          onReturnHome={() => {
+            window.history.pushState(null, '', '/');
+            setCurrentView('upload');
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -119,6 +144,7 @@ export const AppContent: React.FC = () => {
             hasValidImage={Boolean(currentImage)}
             engineState={engineState}
             onInitEngine={initEngine}
+            onOpenPrivacy={() => setIsPrivacyOpen(true)}
           />
           <StepIndicator
             hasImage={Boolean(currentImage)}
@@ -132,25 +158,37 @@ export const AppContent: React.FC = () => {
                 onImageChange={handleImageChange}
                 onContinue={handleContinueToStudio}
                 isGenerating={false}
+                onOpenPrivacy={() => setIsPrivacyOpen(true)}
               />
             </div>
           </main>
-          <Footer />
+          <Footer onOpenPrivacy={() => setIsPrivacyOpen(true)} />
         </div>
       )}
 
       {currentView === 'studio' && (
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-          <V4DiagnosticWorkbench
-            onBackToStudio={() => {
-              setCurrentImage(null);
-              setCurrentView('upload');
-            }}
-            initialImageUrl={currentImage?.objectUrl}
-            initialFileName={currentImage?.file?.name}
-          />
+          <Suspense fallback={<StudioInitSkeleton />}>
+            <V4DiagnosticWorkbench
+              onBackToStudio={() => {
+                setCurrentImage(null);
+                setCurrentView('upload');
+              }}
+              initialImageUrl={currentImage?.objectUrl}
+              initialFileName={currentImage?.file?.name}
+            />
+          </Suspense>
         </main>
       )}
+
+      {/* Global Privacy Architecture & Preferences Modal */}
+      <PrivacyModal
+        isOpen={isPrivacyOpen}
+        onClose={() => setIsPrivacyOpen(false)}
+      />
+
+      {/* Subtle Analytics Consent Banner (Only shown if VITE_GA_MEASUREMENT_ID is configured) */}
+      <ConsentBanner onOpenPreferences={() => setIsPrivacyOpen(true)} />
     </div>
   );
 };

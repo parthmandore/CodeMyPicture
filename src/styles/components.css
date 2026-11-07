@@ -785,6 +785,8 @@
   max-width: 860px;
   margin: var(--space-10) auto;
   padding: 0 var(--space-4);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 540px;
 }
 
 .landing-section__header {

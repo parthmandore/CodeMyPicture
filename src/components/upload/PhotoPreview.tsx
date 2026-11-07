@@ -194,6 +194,9 @@ export const PhotoPreview: React.FC<PhotoPreviewProps> = ({
               src={image.objectUrl}
               alt="Source photograph ready for vector reconstruction"
               className="preview-image-atelier"
+              width={image.width}
+              height={image.height}
+              decoding="async"
               onLoad={handleImageLoad}
             />
 

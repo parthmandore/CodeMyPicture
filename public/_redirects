@@ -1,4 +1,6 @@
 # CodeMyPicture Netlify Redirects Configuration
-# Existing static files (/, /index.html, /assets/*, /favicon.*, /site.webmanifest) are served directly.
+# Contact form serverless API route
+/api/contact    /.netlify/functions/contact   200
+
 # Unknown routes return custom 404 page with 404 HTTP status code:
-/*    /404.html   404
+/*              /404.html                     404

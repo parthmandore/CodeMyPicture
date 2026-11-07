@@ -565,6 +565,7 @@ export const ReconstructionAnimationOverlay: React.FC<ReconstructionAnimationOve
                 src={svgBlobUrl}
                 alt="Synthesized SVG Vector Output"
                 style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                decoding="async"
                 draggable={false}
               />
             </div>

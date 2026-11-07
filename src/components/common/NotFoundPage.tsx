@@ -19,6 +19,13 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({ onReturnHome }) => {
   useEffect(() => {
     const originalTitle = document.title;
     document.title = '404 // Route Not Found — CodeMyPicture';
+
+    const robotsMeta = document.querySelector('meta[name="robots"]');
+    const originalRobots = robotsMeta ? robotsMeta.getAttribute('content') : null;
+    if (robotsMeta) {
+      robotsMeta.setAttribute('content', 'noindex, nofollow');
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' || e.key === 'Enter') {
         handleReturn();
@@ -27,6 +34,9 @@ export const NotFoundPage: React.FC<NotFoundPageProps> = ({ onReturnHome }) => {
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       document.title = originalTitle;
+      if (robotsMeta && originalRobots) {
+        robotsMeta.setAttribute('content', originalRobots);
+      }
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);

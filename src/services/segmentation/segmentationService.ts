@@ -51,10 +51,13 @@ export interface HairSegmentationResult {
   };
 }
 
-const DEFAULT_WASM_PATH =
-  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.0/wasm';
+// Prioritize local same-origin assets for performance and offline reliability
+const DEFAULT_WASM_PATH = '/wasm';
+const DEFAULT_SEGMENTER_MODEL_PATH = '/selfie_multiclass_256x256.tflite';
 
-const DEFAULT_SEGMENTER_MODEL_PATH =
+const CDN_WASM_PATH =
+  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.0/wasm';
+const CDN_SEGMENTER_MODEL_PATH =
   'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite';
 
 export class SegmentationService {
@@ -79,45 +82,53 @@ export class SegmentationService {
     if (this.segmenter && this.isAvailable) return true;
     if (this.initPromise) return this.initPromise;
 
-    this.initPromise = (async () => {
+    const tryCreateSegmenter = async (wPath: string, mPath: string): Promise<ImageSegmenter | null> => {
       try {
-        const vision = await FilesetResolver.forVisionTasks(wasmPath);
-        this.segmenter = await ImageSegmenter.createFromOptions(vision, {
+        const vision = await FilesetResolver.forVisionTasks(wPath);
+        return await ImageSegmenter.createFromOptions(vision, {
           baseOptions: {
-            modelAssetPath: modelPath,
+            modelAssetPath: mPath,
             delegate: 'GPU',
           },
           runningMode: 'IMAGE',
           outputCategoryMask: true,
           outputConfidenceMasks: false,
         });
-        this.isAvailable = true;
-        return true;
-      } catch (err) {
-        console.warn('ImageSegmenter GPU initialization failed, attempting CPU delegate:', err);
+      } catch (gpuErr) {
         try {
-          const vision = await FilesetResolver.forVisionTasks(wasmPath);
-          this.segmenter = await ImageSegmenter.createFromOptions(vision, {
+          const vision = await FilesetResolver.forVisionTasks(wPath);
+          return await ImageSegmenter.createFromOptions(vision, {
             baseOptions: {
-              modelAssetPath: modelPath,
+              modelAssetPath: mPath,
               delegate: 'CPU',
             },
             runningMode: 'IMAGE',
             outputCategoryMask: true,
             outputConfidenceMasks: false,
           });
-          this.isAvailable = true;
-          return true;
-        } catch (cpuErr) {
-          console.warn(
-            'ImageSegmenter unavailable (network or environment restriction). Using landmark-guided heuristic fallback:',
-            cpuErr
-          );
-          this.isAvailable = false;
-          this.segmenter = null;
-          return false;
+        } catch {
+          return null;
         }
       }
+    };
+
+    this.initPromise = (async () => {
+      let segmenter = await tryCreateSegmenter(wasmPath, modelPath);
+      if (!segmenter && wasmPath === DEFAULT_WASM_PATH) {
+        // Fallback to CDN
+        segmenter = await tryCreateSegmenter(CDN_WASM_PATH, CDN_SEGMENTER_MODEL_PATH);
+      }
+      if (segmenter) {
+        this.segmenter = segmenter;
+        this.isAvailable = true;
+        return true;
+      }
+      console.warn(
+        'ImageSegmenter unavailable (network or environment restriction). Using landmark-guided heuristic fallback.'
+      );
+      this.isAvailable = false;
+      this.segmenter = null;
+      return false;
     })();
 
     return this.initPromise;

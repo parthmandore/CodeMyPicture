@@ -4,6 +4,7 @@ import flags from '../../../flags';
 import { minifySvgDocument, SizeOptimizerPreset } from '../../../engine/v4/sizeOptimizer/svgMinifier';
 import { cleanSvgDocument } from '../../../engine/v4/sizeOptimizer/svgCleaner';
 import { useToast } from '../../common/ToastContext';
+import analytics from '../../../services/analytics';
 
 export type ExportPrecision = 0 | 1 | 2 | 'full';
 
@@ -231,6 +232,11 @@ export const V4ExportModal: React.FC<V4ExportModalProps> = ({
         setCopiedKey(key);
         toast.success(`Copied ${key.toUpperCase()} code to clipboard`);
         setTimeout(() => setCopiedKey(null), 2000);
+        if (key === 'svg') {
+          analytics.trackEvent('svg_exported', { precision: String(precision), size_kb: Math.round(text.length / 1024) });
+        } else if (key === 'html') {
+          analytics.trackEvent('html_exported');
+        }
       })
       .catch((err) => {
         console.error('Clipboard copy error:', err);
@@ -248,6 +254,10 @@ export const V4ExportModal: React.FC<V4ExportModalProps> = ({
       a.download = `portrait-p${precision}.svg`;
       a.click();
       URL.revokeObjectURL(url);
+      analytics.trackEvent('svg_exported', {
+        precision: String(precision),
+        size_kb: Math.round(adjustedSvg.length / 1024),
+      });
       toast.success(`Downloaded SVG (portrait-p${precision}.svg)`);
     } catch (err) {
       console.error('SVG download error:', err);
@@ -278,6 +288,7 @@ export const V4ExportModal: React.FC<V4ExportModalProps> = ({
                 a.download = 'portrait.png';
                 a.click();
                 URL.revokeObjectURL(pngUrl);
+                analytics.trackEvent('png_exported', { scale: 1 });
                 toast.success(`Downloaded PNG (${width} × ${height})`);
               } else {
                 toast.error('Failed to convert canvas to PNG');

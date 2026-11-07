@@ -368,6 +368,9 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                         src={effectiveSvgUrl}
                         alt="Vector reconstruction result"
                         className="v4-preview-img"
+                        width={width || 800}
+                        height={height || 600}
+                        decoding="async"
                         draggable={false}
                       />
                     ) : (
@@ -376,6 +379,9 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                           src={currentImgUrl}
                           alt="Original photograph"
                           className="v4-preview-img"
+                          width={width || 800}
+                          height={height || 600}
+                          decoding="async"
                           draggable={false}
                         />
                         {!isGenerating && (
@@ -425,6 +431,9 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                       src={currentImgUrl}
                       alt="Original photograph"
                       className="v4-preview-img"
+                      width={width || 800}
+                      height={height || 600}
+                      decoding="async"
                       draggable={false}
                     />
                     <GeometryOverlay
@@ -448,6 +457,9 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                         src={currentImgUrl}
                         alt="Original photograph"
                         className="v4-preview-img"
+                        width={width || 800}
+                        height={height || 600}
+                        decoding="async"
                         draggable={false}
                       />
                     </div>
@@ -458,6 +470,9 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                           src={effectiveSvgUrl}
                           alt="Vector reconstruction"
                           className="v4-preview-img"
+                          width={width || 800}
+                          height={height || 600}
+                          decoding="async"
                           draggable={false}
                         />
                       ) : (
@@ -474,6 +489,9 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                       src={currentImgUrl}
                       alt="Original photograph"
                       className="v4-wipe-image-base"
+                      width={width || 800}
+                      height={height || 600}
+                      decoding="async"
                       draggable={false}
                     />
                     <div
@@ -485,6 +503,9 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                           src={effectiveSvgUrl}
                           alt="Vector result"
                           className="v4-wipe-image-base"
+                          width={width || 800}
+                          height={height || 600}
+                          decoding="async"
                           draggable={false}
                         />
                       ) : null}
@@ -505,6 +526,9 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                         src={diffBlobUrl}
                         alt="Difference error map"
                         className="v4-preview-img"
+                        width={width || 800}
+                        height={height || 600}
+                        decoding="async"
                         draggable={false}
                       />
                     </div>

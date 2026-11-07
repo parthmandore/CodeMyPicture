@@ -1,7 +1,11 @@
 import React from 'react';
 import { ShieldCheck, ExternalLink, ArrowUpRight } from 'lucide-react';
 
-export const Footer: React.FC = () => {
+export interface FooterProps {
+  onOpenPrivacy?: () => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({ onOpenPrivacy }) => {
   return (
     <footer className="studio-footer" role="contentinfo">
       <div className="studio-footer__inner">
@@ -75,6 +79,19 @@ export const Footer: React.FC = () => {
                 <span className="mono">04 //</span> Client-Side Privacy
               </a>
             </li>
+            {onOpenPrivacy && (
+              <li>
+                <button
+                  type="button"
+                  onClick={onOpenPrivacy}
+                  className="studio-footer__link"
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit', textAlign: 'left', font: 'inherit' }}
+                  title="Open Privacy Architecture & Data Preferences Center"
+                >
+                  <span className="mono">07 //</span> Privacy Preferences
+                </button>
+              </li>
+            )}
             <li>
               <a href="#exports" className="studio-footer__link" title="Jump to Export Formats (SVG, HTML, JSX, PNG)">
                 <span className="mono">05 //</span> Export Formats
@@ -83,6 +100,11 @@ export const Footer: React.FC = () => {
             <li>
               <a href="#diagnostics" className="studio-footer__link" title="Jump to Studio Diagnostics Telemetry">
                 <span className="mono">06 //</span> Diagnostics Telemetry
+              </a>
+            </li>
+            <li>
+              <a href="#contact" className="studio-footer__link" title="Jump to Contact Form & Technical Feedback">
+                <span className="mono">08 //</span> Contact & Feedback
               </a>
             </li>
           </ul>
@@ -106,6 +128,20 @@ export const Footer: React.FC = () => {
           © {new Date().getFullYear()} CodeMyPicture. All rights reserved.
         </div>
         <div className="studio-footer__meta">
+          {onOpenPrivacy && (
+            <>
+              <button
+                type="button"
+                onClick={onOpenPrivacy}
+                className="studio-footer__link mono"
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit', fontSize: 'inherit' }}
+                title="Open Privacy Architecture & Data Preferences Center"
+              >
+                PRIVACY & PREFERENCES
+              </button>
+              <span className="studio-footer__bullet">·</span>
+            </>
+          )}
           <span>LIVE ATELIER v4.0</span>
           <span className="studio-footer__bullet">·</span>
           <span>CLIENT-SIDE SYNTHESIS</span>

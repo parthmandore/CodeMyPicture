@@ -11,11 +11,14 @@ import {
   NormalizedLandmark,
 } from './types';
 
-// Default configuration endpoints for MediaPipe Face Landmarker
-const DEFAULT_WASM_PATH =
-  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.0/wasm';
+// Configuration endpoints for MediaPipe Face Landmarker
+// Local same-origin endpoints prioritized for performance, HTTP/2 multiplexing, and zero third-party latency
+const DEFAULT_WASM_PATH = '/wasm';
+const DEFAULT_MODEL_PATH = '/face_landmarker.task';
 
-const DEFAULT_MODEL_PATH =
+const CDN_WASM_PATH =
+  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.0/wasm';
+const CDN_MODEL_PATH =
   'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 
 import { HeadPose } from '../../types/portrait';
@@ -143,18 +146,15 @@ export class MediaPipeFaceDetectionAdapter implements IFaceDetectionService {
     const preferredDelegate = config.delegate || 'GPU';
     const maxFaces = config.maxFaces || 4;
 
-    try {
-      // 1. Resolve WASM vision fileset
-      const vision = await FilesetResolver.forVisionTasks(wasmPath);
-
-      // 2. Attempt to create FaceLandmarker with GPU delegate first
+    const tryInitWithPaths = async (wasm: string, model: string): Promise<FaceLandmarker> => {
+      const vision = await FilesetResolver.forVisionTasks(wasm);
       let landmarkerInstance: FaceLandmarker | null = null;
       let lastErr: unknown = null;
 
       try {
         landmarkerInstance = await FaceLandmarker.createFromOptions(vision, {
           baseOptions: {
-            modelAssetPath,
+            modelAssetPath: model,
             delegate: preferredDelegate,
           },
           outputFaceBlendshapes: true,
@@ -164,12 +164,11 @@ export class MediaPipeFaceDetectionAdapter implements IFaceDetectionService {
         });
       } catch (gpuError) {
         lastErr = gpuError;
-        // Fallback to CPU delegate if GPU delegate is unavailable
         if (preferredDelegate === 'GPU') {
           try {
             landmarkerInstance = await FaceLandmarker.createFromOptions(vision, {
               baseOptions: {
-                modelAssetPath,
+                modelAssetPath: model,
                 delegate: 'CPU',
               },
               outputFaceBlendshapes: true,
@@ -186,8 +185,21 @@ export class MediaPipeFaceDetectionAdapter implements IFaceDetectionService {
       if (!landmarkerInstance) {
         throw lastErr || new Error('Failed to create FaceLandmarker instance');
       }
+      return landmarkerInstance;
+    };
 
-      this.landmarker = landmarkerInstance;
+    try {
+      try {
+        this.landmarker = await tryInitWithPaths(wasmPath, modelAssetPath);
+      } catch (localErr) {
+        if (!config.wasmPath && !config.modelAssetPath) {
+          console.warn('Local WASM/Model load failed, attempting CDN fallback:', localErr);
+          this.landmarker = await tryInitWithPaths(CDN_WASM_PATH, CDN_MODEL_PATH);
+        } else {
+          throw localErr;
+        }
+      }
+
       this.setState('ready', null);
       return true;
     } catch (err) {

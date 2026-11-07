@@ -8,6 +8,7 @@ export interface HeaderProps {
   hasValidImage: boolean;
   engineState: FaceDetectionState;
   onInitEngine?: () => void;
+  onOpenPrivacy?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
   hasValidImage,
   engineState,
   onInitEngine,
+  onOpenPrivacy,
 }) => {
   // Determine engine badge status
   let engineLabel = 'WASM: Offline';
@@ -85,6 +87,7 @@ export const Header: React.FC<HeaderProps> = ({
             <a href="#features" className="studio-header-section-link" title="Jump to Architecture & Features">Architecture</a>
             <a href="#privacy" className="studio-header-section-link" title="Jump to In-Browser Privacy">Privacy</a>
             <a href="#exports" className="studio-header-section-link" title="Jump to Export Formats">Exports</a>
+            <a href="#contact" className="studio-header-section-link" title="Jump to Contact & Technical Feedback">Contact</a>
           </nav>
         )}
       </div>
@@ -93,7 +96,17 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Local Privacy Guarantee */}
         <div
           className="studio-header-status-badge mono"
-          title="All processing occurs strictly inside your browser memory via WebAssembly and Web Workers. No photos are ever uploaded."
+          role="button"
+          tabIndex={0}
+          onClick={onOpenPrivacy}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onOpenPrivacy?.();
+            }
+          }}
+          style={{ cursor: onOpenPrivacy ? 'pointer' : 'default' }}
+          title="All processing occurs strictly inside your browser memory via WebAssembly and Web Workers. Click to view privacy architecture & preferences."
         >
           <ShieldCheck size={13} style={{ color: 'var(--moss)' }} />
           <span>100% Client-Side</span>
