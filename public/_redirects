@@ -1,0 +1,4 @@
+# CodeMyPicture Netlify Redirects Configuration
+# Existing static files (/, /index.html, /assets/*, /favicon.*, /site.webmanifest) are served directly.
+# Unknown routes return custom 404 page with 404 HTTP status code:
+/*    /404.html   404

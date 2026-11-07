@@ -12,6 +12,8 @@ import { WorkbenchStatus } from '../../../engine/v4/types';
 import { cleanSvgDocument } from '../../../engine/v4/sizeOptimizer/svgCleaner';
 import { TechnicalDiagnosticsPanel } from './TechnicalDiagnosticsPanel';
 import { computeSvgDiagnostics, calculateGenuineGzipSize, SvgSizeStats } from '../../../utils/svgDiagnostics';
+import { EditorSkeleton } from '../../common/Skeletons';
+import { EmptySvgState } from '../../common/EmptyStates';
 
 export type EditorTabFormat = 'svg' | 'html' | 'jsx' | 'diagnostics';
 
@@ -43,6 +45,7 @@ export interface V4CodeEditorProps {
   progressPercent?: number;
   generationStage?: string;
   onCancel?: () => void;
+  onGenerate?: () => void;
   sizeStats?: SvgSizeStats | null;
 }
 
@@ -307,6 +310,7 @@ export const V4CodeEditor: React.FC<V4CodeEditorProps> = ({
   progressPercent = 0,
   generationStage = '',
   onCancel,
+  onGenerate,
   sizeStats,
 }) => {
   const [internalTab, setInternalTab] = useState<EditorTabFormat>('svg');
@@ -1028,11 +1032,20 @@ export const V4CodeEditor: React.FC<V4CodeEditorProps> = ({
             progressPercent={progressPercent}
             generationStage={generationStage}
             onCancel={onCancel}
+            onGenerate={onGenerate}
             mode={mode}
             onCopyTelemetry={() => {
               onToast?.('Telemetry JSON copied to clipboard', 'success');
             }}
           />
+        </div>
+      ) : isStreaming && !currentSvg ? (
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <EditorSkeleton />
+        </div>
+      ) : !currentSvg ? (
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <EmptySvgState onGenerate={onGenerate || (() => {})} isGenerating={isStreaming} context="editor" />
         </div>
       ) : (
         <div className="v4-cm-host" ref={editorContainerRef} />

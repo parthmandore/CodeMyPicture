@@ -22,6 +22,8 @@ import {
   GeometryOverlayControls,
   GeometryOverlayMode,
 } from '../studio/v4/GeometryOverlay';
+import { PreviewSkeleton } from '../common/Skeletons';
+import { useToast } from '../common/ToastContext';
 
 export interface PhotoPreviewProps {
   image: ValidatedImage;
@@ -42,9 +44,17 @@ export const PhotoPreview: React.FC<PhotoPreviewProps> = ({
   const [detectionResult, setDetectionResult] = useState<FaceDetectionResult | null>(null);
   const [geometryData, setGeometryData] = useState<FullImageGeometryData | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+  const toast = useToast();
 
   const { detect, isReady, initialize, state: engineState, errorMessage: engineError } = useFaceDetection(true);
+
+  useEffect(() => {
+    if (engineError) {
+      toast.error(`WASM Engine: ${engineError}`);
+    }
+  }, [engineError, toast]);
 
   // Run face landmark detection when image or engine is ready
   useEffect(() => {
@@ -92,6 +102,7 @@ export const PhotoPreview: React.FC<PhotoPreviewProps> = ({
   }, [image.objectUrl, image.width, image.height, isReady, engineState, detect, initialize]);
 
   const handleImageLoad = async () => {
+    setImageLoaded(true);
     if (imgRef.current) {
       setIsAnalyzing(true);
       try {
@@ -159,7 +170,13 @@ export const PhotoPreview: React.FC<PhotoPreviewProps> = ({
 
       {/* Main Preview Viewport */}
       <div className="preview-card-atelier">
-        <div className="preview-stage-atelier">
+        <div className="preview-stage-atelier" style={{ position: 'relative' }}>
+          {!imageLoaded && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PreviewSkeleton width={image.width} height={image.height} message="Calibrating image buffer & scene geometry…" />
+            </div>
+          )}
+
           <div
             style={{
               position: 'relative',
@@ -168,6 +185,8 @@ export const PhotoPreview: React.FC<PhotoPreviewProps> = ({
               justifyContent: 'center',
               maxWidth: '100%',
               maxHeight: '100%',
+              opacity: imageLoaded ? 1 : 0,
+              transition: 'opacity 180ms ease-out',
             }}
           >
             <img

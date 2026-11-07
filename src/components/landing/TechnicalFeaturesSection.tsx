@@ -30,7 +30,7 @@ export const TechnicalFeaturesSection: React.FC = () => {
   ];
 
   return (
-    <section className="landing-section" aria-labelledby="features-heading">
+    <section id="features" className="landing-section" aria-labelledby="features-heading">
       <div className="landing-section__header">
         <div className="landing-section__badge mono">
           <span>03 // VECTOR ENGINE CAPABILITIES</span>

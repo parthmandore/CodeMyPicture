@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import flags from '../../../flags';
 import { minifySvgDocument, SizeOptimizerPreset } from '../../../engine/v4/sizeOptimizer/svgMinifier';
 import { cleanSvgDocument } from '../../../engine/v4/sizeOptimizer/svgCleaner';
+import { useToast } from '../../common/ToastContext';
 
 export type ExportPrecision = 0 | 1 | 2 | 'full';
 
@@ -137,6 +138,7 @@ export const V4ExportModal: React.FC<V4ExportModalProps> = ({
   const [activeTab, setActiveTab] = useState<'svg' | 'html' | 'react' | 'css' | 'png'>('svg');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [includeCommentsAndIds, setIncludeCommentsAndIds] = useState<boolean>(false);
+  const toast = useToast();
 
   // Precision metrics
   const [fileSizeBytes, setFileSizeBytes] = useState<number>(0);
@@ -223,50 +225,83 @@ export const V4ExportModal: React.FC<V4ExportModalProps> = ({
 
   // Copy helper
   const handleCopy = (text: string, key: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedKey(key);
-      setTimeout(() => setCopiedKey(null), 2000);
-    });
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        setCopiedKey(key);
+        toast.success(`Copied ${key.toUpperCase()} code to clipboard`);
+        setTimeout(() => setCopiedKey(null), 2000);
+      })
+      .catch((err) => {
+        console.error('Clipboard copy error:', err);
+        toast.error('Failed to copy to clipboard');
+      });
   };
 
   // Download SVG
   const handleDownloadSvg = () => {
-    const blob = new Blob([adjustedSvg], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `portrait-p${precision}.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const blob = new Blob([adjustedSvg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `portrait-p${precision}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Downloaded SVG (portrait-p${precision}.svg)`);
+    } catch (err) {
+      console.error('SVG download error:', err);
+      toast.error('Failed to download SVG file');
+    }
   };
 
   // Download PNG rasterization
   const handleDownloadPng = () => {
-    const blob = new Blob([adjustedSvg], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((pngBlob) => {
-          if (pngBlob) {
-            const pngUrl = URL.createObjectURL(pngBlob);
-            const a = document.createElement('a');
-            a.href = pngUrl;
-            a.download = 'portrait.png';
-            a.click();
-            URL.revokeObjectURL(pngUrl);
+    try {
+      const blob = new Blob([adjustedSvg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            canvas.toBlob((pngBlob) => {
+              if (pngBlob) {
+                const pngUrl = URL.createObjectURL(pngBlob);
+                const a = document.createElement('a');
+                a.href = pngUrl;
+                a.download = 'portrait.png';
+                a.click();
+                URL.revokeObjectURL(pngUrl);
+                toast.success(`Downloaded PNG (${width} × ${height})`);
+              } else {
+                toast.error('Failed to convert canvas to PNG');
+              }
+            }, 'image/png');
+          } else {
+            toast.error('Could not get 2D canvas context for rasterization');
           }
-        }, 'image/png');
-      }
-      URL.revokeObjectURL(url);
-    };
-    img.src = url;
+        } catch (rasterErr) {
+          console.error('PNG rasterization error:', rasterErr);
+          toast.error('Error rasterizing SVG to PNG');
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        toast.error('Failed to load SVG into image element for rasterization');
+      };
+      img.src = url;
+    } catch (err) {
+      console.error('PNG export error:', err);
+      toast.error('Failed to export PNG');
+    }
   };
 
   // Formatted file size string

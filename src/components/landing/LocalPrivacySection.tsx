@@ -3,7 +3,7 @@ import { ShieldCheck, Cpu, HardDrive, Lock } from 'lucide-react';
 
 export const LocalPrivacySection: React.FC = () => {
   return (
-    <section className="landing-section landing-privacy-section" aria-labelledby="privacy-heading">
+    <section id="privacy" className="landing-section landing-privacy-section" aria-labelledby="privacy-heading">
       <div className="landing-privacy-banner">
         <div className="landing-privacy-banner__left">
           <div className="landing-privacy-badge mono">

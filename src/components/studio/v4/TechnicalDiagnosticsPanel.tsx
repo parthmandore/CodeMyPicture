@@ -1,6 +1,8 @@
 import React, { useRef, useEffect } from 'react';
 import { TechnicalDiagnostics } from '../../../utils/svgDiagnostics';
 import { CheckCircle2, Cpu, Palette, Sparkles, Terminal } from 'lucide-react';
+import { DiagnosticsSkeleton } from '../../common/Skeletons';
+import { EmptyDiagnosticsState } from '../../common/EmptyStates';
 
 export interface TerminalLogItem {
   id: string;
@@ -19,6 +21,7 @@ export interface TechnicalDiagnosticsPanelProps {
   progressPercent?: number;
   generationStage?: string;
   onCancel?: () => void;
+  onGenerate?: () => void;
   mode?: 'painting' | 'recreation';
 }
 
@@ -32,6 +35,7 @@ export const TechnicalDiagnosticsPanel: React.FC<TechnicalDiagnosticsPanelProps>
   progressPercent,
   generationStage,
   onCancel,
+  onGenerate,
   mode = 'painting',
 }) => {
   const logContainerRef = useRef<HTMLDivElement | null>(null);
@@ -55,6 +59,14 @@ export const TechnicalDiagnosticsPanel: React.FC<TechnicalDiagnosticsPanelProps>
     if (ms >= 1000) return `${(ms / 1000).toFixed(2)} s`;
     return `${Math.round(ms)} ms`;
   };
+
+  if (!isGenerating && diagnostics.pathCount === 0 && (!logs || logs.length === 0)) {
+    return <EmptyDiagnosticsState onGenerate={onGenerate || (() => {})} />;
+  }
+
+  if (isGenerating && diagnostics.pathCount === 0 && (!logs || logs.length === 0)) {
+    return <DiagnosticsSkeleton />;
+  }
 
   return (
     <div className={`technical-diagnostics-dashboard ${className}`} role="region" aria-label="Technical Diagnostics">

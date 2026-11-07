@@ -36,7 +36,7 @@ export const WorkflowSection: React.FC = () => {
   ];
 
   return (
-    <section className="landing-section" aria-labelledby="workflow-heading">
+    <section id="workflow" className="landing-section" aria-labelledby="workflow-heading">
       <div className="landing-section__header">
         <div className="landing-section__badge mono">
           <span>02 // EXECUTION PIPELINE</span>

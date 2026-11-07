@@ -77,6 +77,16 @@ export const Header: React.FC<HeaderProps> = ({
             <span>02 // Workbench</span>
           </button>
         </nav>
+
+        {currentView === 'upload' && (
+          <nav className="studio-header-sections-nav" aria-label="Product Sections Navigation">
+            <a href="#modes" className="studio-header-section-link" title="Jump to Painting vs Recreation Modes">Modes</a>
+            <a href="#workflow" className="studio-header-section-link" title="Jump to Reconstruction Workflow">Workflow</a>
+            <a href="#features" className="studio-header-section-link" title="Jump to Architecture & Features">Architecture</a>
+            <a href="#privacy" className="studio-header-section-link" title="Jump to In-Browser Privacy">Privacy</a>
+            <a href="#exports" className="studio-header-section-link" title="Jump to Export Formats">Exports</a>
+          </nav>
+        )}
       </div>
 
       <div className="v4-header__right">

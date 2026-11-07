@@ -15,7 +15,7 @@ export const DiagnosticsInfoSection: React.FC = () => {
   ];
 
   return (
-    <section className="landing-section" aria-labelledby="diagnostics-heading">
+    <section id="diagnostics" className="landing-section" aria-labelledby="diagnostics-heading">
       <div className="landing-section__header">
         <div className="landing-section__badge mono">
           <span>05 // TELEMETRY & VERIFICATION</span>

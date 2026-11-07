@@ -47,7 +47,7 @@ bench/
 scratch/
 test-photos/
 
-# Prevent accidental image/video commits (favicon.svg is preserved)
+# Prevent accidental image/video commits (favicon and public icons are preserved)
 *.jpg
 *.jpeg
 *.png
@@ -56,3 +56,6 @@ test-photos/
 *.bmp
 *.mp4
 *.webm
+!public/*.png
+!public/*.svg
+!public/*.ico

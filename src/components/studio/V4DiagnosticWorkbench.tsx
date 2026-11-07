@@ -142,8 +142,15 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const showToast = useCallback((message: string, type: 'info' | 'success' | 'warn' | 'error' = 'info') => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, message, type }]);
+    setToasts((prev) => {
+      const existing = prev.find((t) => t.message === message && t.type === type);
+      if (existing) {
+        return prev.map((t) => (t.id === existing.id ? { ...t, count: (t.count || 1) + 1 } : t));
+      }
+      const id = Math.random().toString(36).substring(2, 9);
+      const next = [...prev, { id, message, type, count: 1 }];
+      return next.slice(-4);
+    });
   }, []);
 
   const removeToast = useCallback((id: string) => {
@@ -853,6 +860,10 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
           'success',
           runId
         );
+        showToast(
+          `Vector synthesis complete: ${paths.toLocaleString()} paths generated`,
+          'success'
+        );
         if (skipRequestedRunIdRef.current === runId) {
           transitionToStatus('skipped', 'User skipped animation');
         } else {
@@ -861,9 +872,11 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
       } catch (err: any) {
         if (runId !== currentRunIdRef.current) return;
         console.error('V4 processing error:', err);
-        setErrorMsg(err.message || 'Error executing V4 pipeline');
-        addLog(`[Pipeline Error] ${err.message}`, 'error', runId);
-        transitionToStatus('error', err.message);
+        const errMsg = err?.message || 'Error executing V4 pipeline';
+        setErrorMsg(errMsg);
+        addLog(`[Pipeline Error] ${errMsg}`, 'error', runId);
+        showToast(`Generation error: ${errMsg}`, 'error');
+        transitionToStatus('error', errMsg);
       } finally {
         if (
           runId === currentRunIdRef.current &&
@@ -876,6 +889,12 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
     },
     [addLog, transitionToStatus]
   );
+
+  const handleTriggerGenerate = useCallback(() => {
+    if (!currentImgUrl || isGenerating) return;
+    const bq: QualitySetting = selectedQuality === 'medium' ? 'high' : selectedQuality;
+    processImage(currentImgUrl, 'max', currentFileName, workbenchMode, bq);
+  }, [currentImgUrl, isGenerating, selectedQuality, currentFileName, workbenchMode, processImage]);
 
   // Handle Quality Selection: Low vs Medium vs High
   const handleQualitySelect = useCallback(
@@ -1275,6 +1294,7 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
             progressPercent={progressPercent}
             generationStage={generationStage}
             onCancel={handleCancelGeneration}
+            onGenerate={handleTriggerGenerate}
             sizeStats={sizeStats}
           />
         </section>
@@ -1310,6 +1330,7 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
             sizeStats={sizeStats}
             isDraggingFile={isDraggingFile}
             onDropAreaClick={() => fileInputRef.current?.click()}
+            onGenerate={handleTriggerGenerate}
             accentColor={photoAccent}
             layers={paintingLayers}
             landmarks={detectedLandmarks}

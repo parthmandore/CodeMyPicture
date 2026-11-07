@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>404 // Route Not Found — CodeMyPicture</title>
+    <meta name="description" content="The requested endpoint does not exist. Return to the CodeMyPicture Studio Homepage." />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#14110F" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --ink: #14110F;
+        --ink-2: #1C1815;
+        --ink-3: #26211D;
+        --line: #3A332D;
+        --line-strong: #4F453D;
+        --paper: #ECE5D6;
+        --paper-dim: #A59C8C;
+        --paper-muted: #736B5E;
+        --vermilion: #FF4F2E;
+        --moss: #9DB48A;
+        --amber: #E2A03F;
+        --rose: #E05252;
+        --font-sans: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Monaco, Consolas, monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: var(--ink);
+        color: var(--paper);
+        font-family: var(--font-sans);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 0;
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .mono {
+        font-family: var(--font-mono);
+      }
+
+      /* Atelier Top Navigation Bar */
+      .atelier-header {
+        height: 52px;
+        border-bottom: 1px solid var(--line);
+        background-color: var(--ink-2);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+      }
+
+      .atelier-wordmark {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: var(--paper);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+      }
+
+      .atelier-wordmark em {
+        font-style: italic;
+        color: var(--vermilion);
+      }
+
+      .atelier-status-badge {
+        font-size: 11px;
+        color: var(--paper-dim);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 79, 46, 0.08);
+        border: 1px solid rgba(255, 79, 46, 0.25);
+        padding: 4px 10px;
+        border-radius: 2px;
+        letter-spacing: 0.04em;
+      }
+
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        background-color: var(--vermilion);
+        border-radius: 50%;
+        box-shadow: 0 0 8px var(--vermilion);
+      }
+
+      /* Main Stage Content */
+      .stage-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+      }
+
+      .terminal-frame {
+        width: 100%;
+        max-width: 680px;
+        background-color: var(--ink-2);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+        overflow: hidden;
+      }
+
+      .terminal-titlebar {
+        background-color: #0E0C0B;
+        border-bottom: 1px solid var(--line);
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .window-controls {
+        display: flex;
+        gap: 6px;
+      }
+
+      .ctrl-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+      .ctrl-dot.red { background: #FF5F56; }
+      .ctrl-dot.yellow { background: #FFBD2E; }
+      .ctrl-dot.green { background: #27C93F; }
+
+      .terminal-title {
+        font-size: 11px;
+        color: var(--paper-dim);
+        letter-spacing: 0.05em;
+      }
+
+      .terminal-body {
+        padding: 32px 36px;
+      }
+
+      .error-eyebrow {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--vermilion);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .error-heading {
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        line-height: 1.25;
+        margin-bottom: 12px;
+        color: var(--paper);
+      }
+
+      .error-desc {
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--paper-dim);
+        margin-bottom: 24px;
+      }
+
+      .terminal-code-box {
+        background-color: #0B0A09;
+        border: 1px solid var(--line);
+        border-left: 2px solid var(--vermilion);
+        border-radius: 2px;
+        padding: 16px 20px;
+        font-size: 12px;
+        line-height: 1.7;
+        color: var(--paper-dim);
+        margin-bottom: 28px;
+        overflow-x: auto;
+      }
+
+      .code-line-dim { color: var(--paper-muted); }
+      .code-line-err { color: var(--rose); font-weight: 500; }
+      .code-line-accent { color: var(--vermilion); }
+      .code-line-ok { color: var(--moss); }
+
+      .action-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .v4-btn {
+        height: 38px;
+        padding: 0 18px;
+        border-radius: 2px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        transition: all 140ms ease;
+        border: 1px solid transparent;
+        font-family: var(--font-sans);
+      }
+
+      .v4-btn--accent {
+        background-color: var(--vermilion);
+        color: #FFFFFF;
+        border-color: var(--vermilion);
+      }
+
+      .v4-btn--accent:hover {
+        background-color: #E03E1E;
+        box-shadow: 0 2px 12px rgba(255, 79, 46, 0.3);
+      }
+
+      .v4-btn--secondary {
+        background-color: var(--ink-3);
+        color: var(--paper);
+        border-color: var(--line);
+      }
+
+      .v4-btn--secondary:hover {
+        background-color: var(--ink);
+        border-color: var(--line-strong);
+      }
+
+      .key-hint {
+        font-size: 11px;
+        color: var(--paper-muted);
+        margin-top: 20px;
+        display: block;
+      }
+
+      .key-badge {
+        display: inline-block;
+        padding: 1px 6px;
+        border: 1px solid var(--line);
+        background: var(--ink);
+        border-radius: 2px;
+        font-size: 10px;
+        color: var(--paper-dim);
+      }
+
+      /* Atelier Footer */
+      .atelier-footer {
+        border-top: 1px solid var(--line);
+        background-color: var(--ink-2);
+        padding: 14px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--paper-muted);
+      }
+
+      .footer-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--moss);
+      }
+
+      @media (max-width: 600px) {
+        .terminal-body {
+          padding: 24px 20px;
+        }
+        .error-heading {
+          font-size: 21px;
+        }
+        .action-row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .v4-btn {
+          justify-content: center;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="atelier-header" role="banner">
+      <a href="/" class="atelier-wordmark" title="CodeMyPicture Homepage">
+        CodeMy<em>Picture</em>
+      </a>
+      <div class="atelier-status-badge mono">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span>404 // NOT_FOUND</span>
+      </div>
+    </header>
+
+    <main class="stage-wrap" role="main">
+      <section class="terminal-frame" aria-labelledby="error-heading">
+        <div class="terminal-titlebar">
+          <div class="window-controls" aria-hidden="true">
+            <span class="ctrl-dot red"></span>
+            <span class="ctrl-dot yellow"></span>
+            <span class="ctrl-dot green"></span>
+          </div>
+          <span class="terminal-title mono">atelier://kernel/route_exception.sh</span>
+          <span style="width: 42px;"></span>
+        </div>
+
+        <div class="terminal-body">
+          <div class="error-eyebrow mono">
+            <span>[DIAGNOSTIC] ERROR 404</span>
+          </div>
+
+          <h1 id="error-heading" class="error-heading">Requested Path Does Not Exist</h1>
+
+          <p class="error-desc">
+            The route or asset you navigated to was not found on this server. CodeMyPicture runs 100% locally in your browser memory using WebAssembly and Web Workers.
+          </p>
+
+          <div class="terminal-code-box mono" role="region" aria-label="Diagnostic Trace">
+            <div class="code-line-dim">// System execution diagnostics</div>
+            <div>STATUS: <span class="code-line-err">404 NOT FOUND</span></div>
+            <div>REQUEST_URI: <span id="req-uri" class="code-line-accent">/unknown-route</span></div>
+            <div>CLIENT_HOST: <span>codemypicture.netlify.app</span></div>
+            <div>RUNTIME: <span class="code-line-ok">In-Browser WASM & Web Workers</span></div>
+            <div>MEM_STATE: <span>Zero cloud footprint (Local-first)</span></div>
+            <div class="code-line-dim">// Recommended resolution: return to photo input workspace</div>
+          </div>
+
+          <div class="action-row">
+            <a href="/" class="v4-btn v4-btn--accent">
+              <span>← Return to Studio Homepage</span>
+            </a>
+            <a href="/#v4-workbench" class="v4-btn v4-btn--secondary">
+              <span>Open Studio Workbench</span>
+            </a>
+          </div>
+
+          <span class="key-hint mono">
+            Shortcut: Press <span class="key-badge">Esc</span> or <span class="key-badge">Enter</span> to return to the studio.
+          </span>
+        </div>
+      </section>
+    </main>
+
+    <footer class="atelier-footer" role="contentinfo">
+      <span>CodeMyPicture Atelier Vision Laboratory</span>
+      <div class="footer-pill mono">
+        <span>✓ 100% In-Browser Privacy</span>
+      </div>
+    </footer>
+
+    <script>
+      (function() {
+        var el = document.getElementById('req-uri');
+        if (el && window.location.pathname) {
+          el.textContent = window.location.pathname + window.location.search;
+        }
+
+        window.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape' || e.key === 'Enter') {
+            window.location.href = '/';
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

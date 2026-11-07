@@ -53,19 +53,37 @@ export const Footer: React.FC = () => {
 
         {/* Modes & Architecture Column */}
         <div className="studio-footer__links-col">
-          <div className="studio-footer__col-heading mono">SYNTHESIS MODES</div>
+          <div className="studio-footer__col-heading mono">PRODUCT SECTIONS</div>
           <ul className="studio-footer__link-list">
-            <li className="studio-footer__item-static">
-              <span className="mono">01 //</span> Painting Studio (Organic Planes)
+            <li>
+              <a href="#modes" className="studio-footer__link" title="Jump to Painting and Recreation Mode Comparison">
+                <span className="mono">01 //</span> Modes (Painting & Recreation)
+              </a>
             </li>
-            <li className="studio-footer__item-static">
-              <span className="mono">02 //</span> Photographic Recreation (High Fidelity)
+            <li>
+              <a href="#workflow" className="studio-footer__link" title="Jump to Five-Stage Reconstruction Workflow">
+                <span className="mono">02 //</span> How It Works (Workflow)
+              </a>
             </li>
-            <li className="studio-footer__item-static">
-              <span className="mono">03 //</span> Dual Quality (High / Low Tiers)
+            <li>
+              <a href="#features" className="studio-footer__link" title="Jump to Technical Features and Architecture">
+                <span className="mono">03 //</span> Architecture & Geometry
+              </a>
             </li>
-            <li className="studio-footer__item-static">
-              <span className="mono">04 //</span> 11 Engineering Diagnostic Metrics
+            <li>
+              <a href="#privacy" className="studio-footer__link" title="Jump to 100% In-Browser Privacy Guarantee">
+                <span className="mono">04 //</span> Client-Side Privacy
+              </a>
+            </li>
+            <li>
+              <a href="#exports" className="studio-footer__link" title="Jump to Export Formats (SVG, HTML, JSX, PNG)">
+                <span className="mono">05 //</span> Export Formats
+              </a>
+            </li>
+            <li>
+              <a href="#diagnostics" className="studio-footer__link" title="Jump to Studio Diagnostics Telemetry">
+                <span className="mono">06 //</span> Diagnostics Telemetry
+              </a>
             </li>
           </ul>
         </div>

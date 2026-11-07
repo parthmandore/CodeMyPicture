@@ -59,6 +59,37 @@
   color: var(--paper);
 }
 
+.studio-header-sections-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-left: var(--space-5);
+  padding-left: var(--space-5);
+  border-left: 1px solid var(--line);
+}
+
+.studio-header-section-link {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--paper-dim);
+  text-decoration: none;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.studio-header-section-link:hover {
+  color: var(--paper);
+  background-color: var(--ink-2);
+}
+
+@media (max-width: 900px) {
+  .studio-header-sections-nav {
+    display: none;
+  }
+}
+
 .studio-header-status-badge {
   display: inline-flex;
   align-items: center;
@@ -1347,3 +1378,119 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   Loading Skeletons, Shimmer & Toast Enhancement
+   ========================================================================== */
+
+@keyframes atelierShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.atelier-skeleton-bar {
+  display: block;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Toast Enhanced Components */
+.atelier-toast-icon {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.atelier-toast--success .atelier-toast-icon {
+  color: var(--moss);
+}
+
+.atelier-toast--warn .atelier-toast-icon {
+  color: var(--amber);
+}
+
+.atelier-toast--error .atelier-toast-icon {
+  color: var(--rose);
+}
+
+.atelier-toast-close {
+  background: none;
+  border: none;
+  color: var(--paper-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  margin-left: auto;
+  transition: color 120ms ease;
+}
+
+.atelier-toast-close:hover {
+  color: var(--paper);
+}
+
+.atelier-toast-count {
+  margin-left: 6px;
+  font-size: 11px;
+  background: var(--ink-3);
+  padding: 1px 5px;
+  border-radius: 2px;
+  color: var(--paper-dim);
+  border: 1px solid var(--line);
+}
+
+/* ==========================================================================
+   Comprehensive Reduced Motion Accessibility
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  /* Prevent jarring movement on spinners without freezing state */
+  .analyzing-hud-spinner,
+  .atelier-spinner {
+    animation: none !important;
+    border-style: dotted !important;
+    opacity: 0.85;
+  }
+
+  /* Shimmer animations turn into static, calm tones */
+  .atelier-skeleton-bar {
+    animation: none !important;
+    background-image: none !important;
+    opacity: 0.7;
+  }
+
+  /* Toast animations fade without sliding up */
+  .atelier-toast,
+  .atelier-toast-portal > div {
+    animation: atelierFadeIn 120ms ease-out !important;
+    transform: none !important;
+  }
+
+  /* Hover transforms and lift effects */
+  .v4-btn:hover,
+  .v4-card:hover,
+  .calibration-card-atelier:hover {
+    transform: none !important;
+  }
+
+  /* Scan beams and pulses */
+  .anim-scan-beam,
+  .anim-hud-dot,
+  .anim-sample-reticle,
+  .anim-palette-dock,
+  .anim-mesh-edge,
+  .anim-vector-path {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  /* Smooth scroll behavior */
+  html, body, * {
+    scroll-behavior: auto !important;
+  }
+}
+

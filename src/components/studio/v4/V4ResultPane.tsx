@@ -11,6 +11,7 @@ import {
   FullImageGeometryData,
 } from '../../../services/geometry/imageGeometryService';
 import { SvgSizeStats } from '../../../utils/svgDiagnostics';
+import { EmptyPhotoState, EmptySvgState, MissingContentState } from '../../common/EmptyStates';
 
 export type ResultViewMode = 'result' | 'photo' | 'side-by-side' | 'wipe-slider' | 'diff';
 
@@ -31,6 +32,7 @@ export interface V4ResultPaneProps {
   sizeStats?: SvgSizeStats | null;
   isDraggingFile?: boolean;
   onDropAreaClick?: () => void;
+  onGenerate?: () => void;
   accentColor?: string;
   layers?: any[];
   landmarks?: any[];
@@ -53,6 +55,7 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
   sizeStats,
   isDraggingFile = false,
   onDropAreaClick,
+  onGenerate,
   accentColor = '#FF4F2E',
   layers = [],
   landmarks = [],
@@ -338,17 +341,7 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
           </div>
         ) : isEmpty ? (
           /* State B: Empty State (Dashed drop zone) */
-          <div
-            className={`atelier-frame atelier-frame--empty ${isDraggingFile ? 'is-drag-over' : ''}`}
-            onClick={onDropAreaClick}
-          >
-            <div className="atelier-crop-mark atelier-crop-mark--tl" />
-            <div className="atelier-crop-mark atelier-crop-mark--tr" />
-            <div className="atelier-crop-mark atelier-crop-mark--bl" />
-            <div className="atelier-crop-mark atelier-crop-mark--br" />
-
-            <div className="atelier-empty-text mono">Drop a photo or click to upload</div>
-          </div>
+          <EmptyPhotoState onUploadClick={onDropAreaClick || (() => {})} isDragging={isDraggingFile} />
         ) : (
           /* State C: Populated Viewport with L-shaped crop marks */
           <div className={`atelier-frame ${isDraggingFile ? 'is-drag-over' : ''}`}>
@@ -369,7 +362,7 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
               >
                 {/* 1. Result View (SVG if ready, photo fallback) */}
                 {viewMode === 'result' && (
-                  <div className="v4-preview-wrapper">
+                  <div className="v4-preview-wrapper" style={{ position: 'relative' }}>
                     {effectiveSvgUrl ? (
                       <img
                         src={effectiveSvgUrl}
@@ -378,12 +371,40 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                         draggable={false}
                       />
                     ) : (
-                      <img
-                        src={currentImgUrl}
-                        alt="Original photograph"
-                        className="v4-preview-img"
-                        draggable={false}
-                      />
+                      <>
+                        <img
+                          src={currentImgUrl}
+                          alt="Original photograph"
+                          className="v4-preview-img"
+                          draggable={false}
+                        />
+                        {!isGenerating && (
+                          <div
+                            className="mono"
+                            style={{
+                              position: 'absolute',
+                              bottom: '16px',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              backgroundColor: 'rgba(20, 17, 15, 0.88)',
+                              backdropFilter: 'blur(6px)',
+                              border: '1px solid var(--line-strong)',
+                              borderRadius: '2px',
+                              padding: '6px 14px',
+                              fontSize: '11px',
+                              color: 'var(--paper)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              zIndex: 25,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--moss)' }} />
+                            <span>Photo Calibrated • Ready for Synthesis</span>
+                          </div>
+                        )}
+                      </>
                     )}
                     <GeometryOverlay
                       width={width || 800}
@@ -440,9 +461,7 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                           draggable={false}
                         />
                       ) : (
-                        <div style={{ color: 'var(--paper-dim)' }} className="mono">
-                          Output not yet generated
-                        </div>
+                        <EmptySvgState onGenerate={onGenerate || (() => {})} context="result" />
                       )}
                     </div>
                   </div>
@@ -490,9 +509,12 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                       />
                     </div>
                   ) : (
-                    <div style={{ color: 'var(--paper-dim)' }} className="mono">
-                      Difference map will be calculated when reconstruction completes.
-                    </div>
+                    <MissingContentState
+                      title="Difference Map Standby"
+                      message="Vector reconstruction must be synthesized first before calculating pixel-level perceptual difference."
+                      actionLabel="Generate Vector Artwork"
+                      onAction={onGenerate}
+                    />
                   ))}
               </div>
             </div>

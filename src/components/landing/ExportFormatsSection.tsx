@@ -34,7 +34,7 @@ export const ExportFormatsSection: React.FC = () => {
   ];
 
   return (
-    <section className="landing-section" aria-labelledby="export-heading">
+    <section id="exports" className="landing-section" aria-labelledby="export-heading">
       <div className="landing-section__header">
         <div className="landing-section__badge mono">
           <span>04 // OUTPUT SPECIFICATIONS</span>

@@ -5,6 +5,7 @@ import { loadImageFromFile, safeRevokeObjectURL } from '../../utils/imageLoader'
 import { Dropzone } from './Dropzone';
 import { PhotoPreview } from './PhotoPreview';
 import { ErrorAlert } from '../common/ErrorAlert';
+import { useToast } from '../common/ToastContext';
 import { FaceDetectionResult } from '../../services/faceDetection/types';
 import { ModeComparisonSection } from '../landing/ModeComparisonSection';
 import { WorkflowSection } from '../landing/WorkflowSection';
@@ -29,6 +30,7 @@ export const UploadWorkflow: React.FC<UploadWorkflowProps> = ({
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<UploadError | null>(null);
   const replaceFileInputRef = useRef<HTMLInputElement>(null);
+  const toast = useToast();
 
   const processFile = useCallback(
     async (file: File) => {
@@ -41,6 +43,7 @@ export const UploadWorkflow: React.FC<UploadWorkflowProps> = ({
 
         if (!validationResult.valid) {
           setError(validationResult.error);
+          toast.error(validationResult.error.message);
           setIsValidating(false);
           return;
         }
@@ -50,6 +53,7 @@ export const UploadWorkflow: React.FC<UploadWorkflowProps> = ({
 
         if (!loadResult.success) {
           setError(loadResult.error);
+          toast.error(loadResult.error.message);
           setIsValidating(false);
           return;
         }
@@ -60,19 +64,22 @@ export const UploadWorkflow: React.FC<UploadWorkflowProps> = ({
         }
 
         onImageChange(loadResult.image);
+        toast.success(`Photo loaded: ${file.name} (${loadResult.image.width} × ${loadResult.image.height} px)`);
       } catch (err) {
         console.error('Unhandled upload processing error:', err);
+        const errMsg = err instanceof Error ? err.message : String(err);
         setError({
           code: 'SYSTEM_ERROR',
           message: 'An unexpected error occurred while processing the image file.',
-          details: err instanceof Error ? err.message : String(err),
+          details: errMsg,
           timestamp: Date.now(),
         });
+        toast.error(`Upload error: ${errMsg}`);
       } finally {
         setIsValidating(false);
       }
     },
-    [currentImage, onImageChange]
+    [currentImage, onImageChange, toast]
   );
 
   const handleRemovePhoto = useCallback(() => {
@@ -81,7 +88,8 @@ export const UploadWorkflow: React.FC<UploadWorkflowProps> = ({
     }
     onImageChange(null);
     setError(null);
-  }, [currentImage, onImageChange]);
+    toast.info('Photograph removed');
+  }, [currentImage, onImageChange, toast]);
 
   const handleTriggerReplace = useCallback(() => {
     replaceFileInputRef.current?.click();

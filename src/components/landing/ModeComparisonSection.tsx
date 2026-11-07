@@ -3,7 +3,7 @@ import { Palette, Camera } from 'lucide-react';
 
 export const ModeComparisonSection: React.FC = () => {
   return (
-    <section className="landing-section" aria-labelledby="modes-heading">
+    <section id="modes" className="landing-section" aria-labelledby="modes-heading">
       <div className="landing-section__header">
         <div className="landing-section__badge mono">
           <span>01 // DUAL SYNTHESIS ENGINES</span>

@@ -8,22 +8,32 @@ import { StepIndicator } from './components/studio/StepIndicator';
 import { UploadWorkflow } from './components/upload/UploadWorkflow';
 import { Footer } from './components/layout/Footer';
 import { V4DiagnosticWorkbench } from './components/studio/V4DiagnosticWorkbench';
+import { NotFoundPage } from './components/common/NotFoundPage';
+import { ToastProvider } from './components/common/ToastContext';
 import { safeRevokeObjectURL } from './utils/imageLoader';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/components.css';
 import './styles/v4workbench.css';
 
-export const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'upload' | 'studio'>('upload');
+export const AppContent: React.FC = () => {
+  const [currentView, setCurrentView] = useState<'upload' | 'studio' | 'not-found'>('upload');
   const [currentImage, setCurrentImage] = useState<ValidatedImage | null>(null);
 
   // Initialize MediaPipe engines eagerly in background
   const { state: engineState, initialize: initEngine } = useFaceDetection(true);
 
-  // Direct route detection for #v4-workbench, #studio, etc.
+  // Path & hash routing detection
   useEffect(() => {
-    const checkHash = () => {
+    const checkRoute = () => {
+      const pathname = window.location.pathname;
+      const isRootPath = pathname === '/' || pathname === '' || pathname.endsWith('index.html');
+
+      if (!isRootPath) {
+        setCurrentView('not-found');
+        return;
+      }
+
       if (
         window.location.hash.includes('v4') ||
         window.location.hash.includes('studio') ||
@@ -35,12 +45,21 @@ export const App: React.FC = () => {
         } else {
           setCurrentView('upload');
         }
+      } else {
+        if (currentView === 'not-found') {
+          setCurrentView('upload');
+        }
       }
     };
-    checkHash();
-    window.addEventListener('hashchange', checkHash);
-    return () => window.removeEventListener('hashchange', checkHash);
-  }, [currentImage]);
+
+    checkRoute();
+    window.addEventListener('hashchange', checkRoute);
+    window.addEventListener('popstate', checkRoute);
+    return () => {
+      window.removeEventListener('hashchange', checkRoute);
+      window.removeEventListener('popstate', checkRoute);
+    };
+  }, [currentImage, currentView]);
 
   useEffect(() => {
     SegmentationService.getInstance().initialize().catch((err) => {
@@ -78,6 +97,17 @@ export const App: React.FC = () => {
     }
     setCurrentView(view);
   };
+
+  if (currentView === 'not-found') {
+    return (
+      <NotFoundPage
+        onReturnHome={() => {
+          window.history.pushState(null, '', '/');
+          setCurrentView('upload');
+        }}
+      />
+    );
+  }
 
   return (
     <div className="codemypicture-app codemyface-app">
@@ -122,6 +152,14 @@ export const App: React.FC = () => {
         </main>
       )}
     </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 };
 
