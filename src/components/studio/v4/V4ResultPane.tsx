@@ -1,9 +1,9 @@
+import "../../../styles/reconstructionAnimation.css";
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { SplitSquareVertical } from 'lucide-react';
 import { WorkbenchStatus } from '../../../engine/v4/types';
 import {
   GeometryOverlay,
-  InspectPopover,
   GeometryOverlayMode,
 } from './GeometryOverlay';
 import {
@@ -11,6 +11,7 @@ import {
   FullImageGeometryData,
 } from '../../../services/geometry/imageGeometryService';
 import { SvgSizeStats } from '../../../utils/svgDiagnostics';
+import { ThinkingOrb } from './ThinkingOrb';
 import { EmptyPhotoState, EmptySvgState, MissingContentState } from '../../common/EmptyStates';
 
 export type ResultViewMode = 'result' | 'photo' | 'side-by-side' | 'wipe-slider' | 'diff';
@@ -48,7 +49,7 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
   diffBlobUrl,
   status: _status,
   isGenerating = false,
-  generationStage: _generationStage = '',
+  generationStage = '',
   progressPercent: _progressPercent = 0,
   width,
   height,
@@ -60,29 +61,16 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
   layers = [],
   landmarks = [],
 }) => {
-  const [viewMode, setViewMode] = useState<ResultViewMode>('result');
+  const [viewMode, setViewMode] = useState<ResultViewMode>('side-by-side');
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState<boolean>(false);
   const [sliderPos, setSliderPos] = useState<number>(50);
   const [isFocusMode, setIsFocusMode] = useState<boolean>(false);
-  const [overlayMode, setOverlayMode] = useState<GeometryOverlayMode>('none');
+  const [overlayMode] = useState<GeometryOverlayMode>('none');
   const [geometryData, setGeometryData] = useState<FullImageGeometryData | null>(null);
 
-  // Live timer for static generating text ("Generating... 4.2s")
-  const [elapsedSec, setElapsedSec] = useState<number>(0);
-  const genStartRef = useRef<number>(0);
-
-  useEffect(() => {
-    if (isGenerating) {
-      genStartRef.current = Date.now();
-      setElapsedSec(0);
-      const interval = setInterval(() => {
-        setElapsedSec(parseFloat(((Date.now() - genStartRef.current) / 1000).toFixed(1)));
-      }, 100);
-      return () => clearInterval(interval);
-    }
-  }, [isGenerating]);
+  // Clean background generation tracking without 100ms timer churn
 
   // Extract geometry for overlays
   useEffect(() => {
@@ -120,6 +108,15 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
   const viewportRef = useRef<HTMLDivElement | null>(null);
 
   const effectiveSvgUrl = svgBlobUrl || lastGoodBlobUrl;
+
+  // Always show side by side view when result is generated
+  const prevSvgUrlRef = useRef<string>('');
+  useEffect(() => {
+    if (effectiveSvgUrl && !isGenerating && prevSvgUrlRef.current !== effectiveSvgUrl) {
+      setViewMode('side-by-side');
+      prevSvgUrlRef.current = effectiveSvgUrl;
+    }
+  }, [effectiveSvgUrl, isGenerating]);
 
   const handleZoomIn = () => setZoomLevel((z) => Math.min(500, z + 25));
   const handleZoomOut = () => setZoomLevel((z) => Math.max(25, z - 25));
@@ -231,7 +228,9 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
   const pathsText = sizeStats ? `${sizeStats.pathCount.toLocaleString()} paths` : '0 paths';
   const gzText = sizeStats && sizeStats.formattedGzip ? `${sizeStats.formattedGzip} gz` : '0 KB gz';
   const dimsText = width > 0 && height > 0 ? `${width}x${height}` : '';
-  const captionText = `${modeTitle} · ${qualityTitle} · ${pathsText} · ${gzText}${dimsText ? ` · ${dimsText}` : ''}`;
+  const captionText = isGenerating && !effectiveSvgUrl
+    ? `${modeTitle} · ${qualityTitle} · Generating vector artwork…`
+    : `${modeTitle} · ${qualityTitle} · ${pathsText} · ${gzText}${dimsText ? ` · ${dimsText}` : ''}`;
 
   return (
     <div className={`v4-result-section ${isFocusMode ? 'is-focus-mode' : ''}`}>
@@ -285,13 +284,7 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
           </button>
         </div>
 
-        {/* Inspect popover menu with radio items */}
-        <InspectPopover
-          activeMode={overlayMode}
-          onModeChange={setOverlayMode}
-          hasLandmarks={Boolean(landmarks && landmarks.length > 0)}
-          hasSvgPaths={Boolean(layers && layers.length > 0)}
-        />
+
       </div>
 
       {/* 2. Paper-Grain Viewport Canvas Area */}
@@ -334,16 +327,11 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
           </div>
         )}
 
-        {/* State A: While generating: show static text only ("Generating... 4.2s"). Never show previous photo. */}
-        {isGenerating ? (
-          <div className="v4-generating-box mono">
-            <span>Generating... {elapsedSec.toFixed(1)}s</span>
-          </div>
-        ) : isEmpty ? (
+        {isEmpty ? (
           /* State B: Empty State (Dashed drop zone) */
           <EmptyPhotoState onUploadClick={onDropAreaClick || (() => {})} isDragging={isDraggingFile} />
         ) : (
-          /* State C: Populated Viewport with L-shaped crop marks */
+          /* Populated Viewport with L-shaped crop marks */
           <div className={`atelier-frame ${isDraggingFile ? 'is-drag-over' : ''}`}>
             <div className="atelier-crop-mark atelier-crop-mark--tl" />
             <div className="atelier-crop-mark atelier-crop-mark--tr" />
@@ -360,10 +348,10 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                   transition: isPanning ? 'none' : 'transform 0.1s ease-out',
                 }}
               >
-                {/* 1. Result View (SVG if ready, photo fallback) */}
+                {/* 1. Result View (SVG if ready and not regenerating, loading state with photo & signature animation otherwise) */}
                 {viewMode === 'result' && (
                   <div className="v4-preview-wrapper" style={{ position: 'relative' }}>
-                    {effectiveSvgUrl ? (
+                    {!isGenerating && effectiveSvgUrl ? (
                       <img
                         src={effectiveSvgUrl}
                         alt="Vector reconstruction result"
@@ -374,7 +362,7 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                         draggable={false}
                       />
                     ) : (
-                      <>
+                      <div className="anim-viewport-stage" style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <img
                           src={currentImgUrl}
                           alt="Original photograph"
@@ -383,8 +371,74 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                           height={height || 600}
                           decoding="async"
                           draggable={false}
+                          style={{
+                            filter: isGenerating ? 'brightness(0.85) contrast(1.05)' : 'none',
+                            transition: 'filter 0.3s ease',
+                          }}
                         />
-                        {!isGenerating && (
+
+                        {isGenerating && (
+                          <>
+                            {/* Scanning laser beam sweeping vertically across photograph */}
+                            <div className="anim-scan-beam" />
+
+                            {/* Corner coordinate reticles */}
+                            <div className="anim-corner-reticle anim-corner-reticle--tl mono">[000, 000]</div>
+                            <div className="anim-corner-reticle anim-corner-reticle--tr mono">[{width || 800}, 000]</div>
+                            <div className="anim-corner-reticle anim-corner-reticle--bl mono">[000, {height || 600}]</div>
+                            <div className="anim-corner-reticle anim-corner-reticle--br mono">[{width || 800}, {height || 600}]</div>
+
+                            {/* Blueprint grid overlay */}
+                            <svg
+                              className="anim-structural-svg"
+                              viewBox={`0 0 ${width || 800} ${height || 600}`}
+                              preserveAspectRatio="none"
+                              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+                            >
+                              <defs>
+                                <pattern id="v4-anim-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="0.75" />
+                                </pattern>
+                              </defs>
+                              <rect width="100%" height="100%" fill="url(#v4-anim-grid)" />
+                            </svg>
+
+                            {/* Center-Bottom Floating Glass HUD Badge */}
+                            <div
+                              className="mono"
+                              style={{
+                                position: 'absolute',
+                                bottom: '16px',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                backgroundColor: 'rgba(20, 17, 15, 0.92)',
+                                backdropFilter: 'blur(8px)',
+                                border: '1px solid var(--accent)',
+                                borderRadius: '3px',
+                                padding: '8px 16px',
+                                fontSize: '11px',
+                                color: 'var(--paper)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                zIndex: 30,
+                                whiteSpace: 'nowrap',
+                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.75), 0 0 10px rgba(255, 79, 46, 0.3)',
+                              }}
+                            >
+                              <div className="anim-hud-dot" />
+                              <span style={{ fontWeight: 600, color: 'var(--accent)', letterSpacing: '0.05em' }}>
+                                {mode === 'painting' ? 'PAINTING SYNTHESIS' : 'EXACT COPY RECREATION'}
+                              </span>
+                              <span style={{ color: 'var(--line-strong)' }}>|</span>
+                              <span style={{ color: 'var(--paper-dim)' }}>
+                                {generationStage || 'Synthesizing vector contours...'}
+                              </span>
+                            </div>
+                          </>
+                        )}
+
+                        {!isGenerating && !effectiveSvgUrl && (
                           <div
                             className="mono"
                             style={{
@@ -410,7 +464,7 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                             <span>Photo Calibrated • Ready for Synthesis</span>
                           </div>
                         )}
-                      </>
+                      </div>
                     )}
                     <GeometryOverlay
                       width={width || 800}
@@ -465,7 +519,7 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                     </div>
                     <div className="v4-side-pane">
                       <span className="v4-side-pane__label mono">Result</span>
-                      {effectiveSvgUrl ? (
+                      {effectiveSvgUrl && !isGenerating ? (
                         <img
                           src={effectiveSvgUrl}
                           alt="Vector reconstruction"
@@ -474,6 +528,12 @@ export const V4ResultPane: React.FC<V4ResultPaneProps> = ({
                           height={height || 600}
                           decoding="async"
                           draggable={false}
+                        />
+                      ) : isGenerating ? (
+                        <ThinkingOrb
+                          mode={mode}
+                          stage={generationStage}
+                          progressPercent={_progressPercent}
                         />
                       ) : (
                         <EmptySvgState onGenerate={onGenerate || (() => {})} context="result" />

@@ -86,6 +86,10 @@ export class MediaPipeFaceDetectionAdapter implements IFaceDetectionService {
   private landmarker: FaceLandmarker | null = null;
   private listeners: Set<(state: FaceDetectionState, error: string | null) => void> = new Set();
   private initPromise: Promise<boolean> | null = null;
+  private lastDetectionCache: {
+    sourceKey: string;
+    result: FaceDetectionResult;
+  } | null = null;
 
   public getState(): FaceDetectionState {
     return this.state;
@@ -248,6 +252,17 @@ export class MediaPipeFaceDetectionAdapter implements IFaceDetectionService {
       }
     }
 
+    let sourceKey = '';
+    if (source instanceof HTMLImageElement) {
+      sourceKey = 'img:' + source.src + ':' + (source.naturalWidth || source.width) + 'x' + (source.naturalHeight || source.height);
+    } else if (source instanceof HTMLCanvasElement) {
+      sourceKey = 'canvas:' + source.width + 'x' + source.height + ':' + ((source as any).__faceDetectionCacheId || '');
+    }
+
+    if (sourceKey && this.lastDetectionCache && this.lastDetectionCache.sourceKey === sourceKey) {
+      return this.lastDetectionCache.result;
+    }
+
     const previousState = this.state;
     this.setState('detecting', null);
     const startTime = performance.now();
@@ -343,7 +358,7 @@ export class MediaPipeFaceDetectionAdapter implements IFaceDetectionService {
 
       this.setState('ready', null);
 
-      return {
+      const finalResult: FaceDetectionResult = {
         detected: true,
         faceCount: rawLandmarks.length,
         selectedFaceIndex: selectedFace.index,
@@ -366,6 +381,10 @@ export class MediaPipeFaceDetectionAdapter implements IFaceDetectionService {
         latencyMs,
         timestamp: Date.now(),
       };
+      if (sourceKey) {
+        this.lastDetectionCache = { sourceKey, result: finalResult };
+      }
+      return finalResult;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.setState('ready', null);

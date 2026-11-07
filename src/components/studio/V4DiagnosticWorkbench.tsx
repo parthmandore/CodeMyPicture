@@ -22,6 +22,7 @@ import { minifySvgDocument } from '../../engine/v4/sizeOptimizer/svgMinifier';
 import flags from '../../flags';
 import analytics from '../../services/analytics';
 import '../../styles/v4workbench.css';
+import { generationManager, useGenerationJob } from '../../services/generation';
 
 
 export interface V4DiagnosticWorkbenchProps {
@@ -86,6 +87,43 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
   const [generationStage, setGenerationStage] = useState<string>('Ready');
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [, setErrorMsg] = useState<string | null>(null);
+
+  const job = useGenerationJob();
+
+  // Sync state from background GenerationManager
+  useEffect(() => {
+    if (!job) return;
+    if (job.status === 'completed') {
+      setWorkbenchMode(job.mode);
+      setSelectedQuality(job.quality === 'low' ? 'low' : 'high');
+      setCurrentSvg(job.svgOutput);
+      setOriginalSvg(job.svgOutput);
+      setSvgBlobUrl(job.svgBlobUrl);
+      setLastGoodBlobUrl(job.svgBlobUrl);
+      setDiffBlobUrl(job.diffBlobUrl);
+      setTiersData(job.tiersData);
+      setSummaryData(job.summaryData);
+      setImageDims(job.imageDimensions);
+      setLogs(job.logs);
+      setPhotoAccent(job.photoAccent);
+      setColorMetrics(job.colorMetrics);
+      setDetectedLandmarks(job.detectedLandmarks);
+      setPaintingLayers(job.paintingLayers);
+      setWorkbenchStatus('done');
+    } else if (job.status === 'running') {
+      setWorkbenchStatus('painting');
+      setGenerationStage(job.stageDetail);
+      setProgressPercent(job.progressPercent);
+      setLogs(job.logs);
+      if (job.paintingLayers && job.paintingLayers.length > 0) {
+        setPaintingLayers(job.paintingLayers);
+      }
+    } else if (job.status === 'failed') {
+      setWorkbenchStatus('error');
+      setErrorMsg(job.error || 'Generation failed');
+      setLogs(job.logs);
+    }
+  }, [job]);
 
   // SVGs & sandboxed blob URL
   const [originalSvg, setOriginalSvg] = useState<string>('');
@@ -315,22 +353,23 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
     [transitionToStatus]
   );
 
-  // Manage SVG Blob URL securely (sandboxing scripts)
+  // Manage SVG Blob URL securely without revoking cached job URLs
   useEffect(() => {
     if (!currentSvg) return;
+    if (job?.svgBlobUrl && currentSvg === job.svgOutput) {
+      setSvgBlobUrl(job.svgBlobUrl);
+      setLastGoodBlobUrl(job.svgBlobUrl);
+      return;
+    }
     try {
-      
       const blob = new Blob([currentSvg], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
-      setSvgBlobUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return url;
-      });
+      setSvgBlobUrl(url);
       setLastGoodBlobUrl(url);
     } catch (e) {
       console.error('Failed to create Blob URL from SVG:', e);
     }
-  }, [currentSvg]);
+  }, [currentSvg, job?.svgBlobUrl, job?.svgOutput]);
 
   // Helper: Sample average color around landmarks
   const sampleColorAround = (
@@ -366,6 +405,7 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
 
   // Helper: Terminate Web Worker safely
   const handleCancelGeneration = useCallback(() => {
+    generationManager.cancelActiveJob('Cancelled by user');
     cancelCurrentRun('Cancelled by user');
     addLog('[V4 Pipeline] Generation cancelled by user.', 'warn', currentRunIdRef.current);
   }, [cancelCurrentRun, addLog]);
@@ -914,13 +954,18 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
   const handleTriggerGenerate = useCallback(() => {
     if (!currentImgUrl || isGenerating) return;
     const bq: QualitySetting = selectedQuality === 'medium' ? 'high' : selectedQuality;
-    processImage(currentImgUrl, 'max', currentFileName, workbenchMode, bq);
+    generationManager.startJob(currentImgUrl, currentFileName, workbenchMode, bq).catch((err) => {
+                console.error('Generate click error:', err);
+              });
   }, [currentImgUrl, isGenerating, selectedQuality, currentFileName, workbenchMode, processImage]);
 
   // Handle Quality Selection: Low vs Medium vs High
   const handleQualitySelect = useCallback(
     (q: 'low' | 'medium' | 'high') => {
       setSelectedQuality(q);
+      if (job?.tiersData) {
+        generationManager.switchTier(q === 'low' ? 'low' : 'high');
+      }
       if (q === 'high') {
         analytics.trackEvent('high_quality_selected');
       } else if (q === 'low') {
@@ -963,12 +1008,12 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
       } else {
         analytics.trackEvent('recreation_mode_selected');
       }
-      if (currentImgUrl) {
-        const backendQuality: QualitySetting = selectedQuality === 'medium' ? 'high' : selectedQuality;
-        processImage(currentImgUrl, 'max', currentFileName, newMode, backendQuality);
+      const isInstant = generationManager.switchMode(newMode);
+      if (!isInstant) {
+        setWorkbenchStatus('painting');
       }
     },
-    [currentImgUrl, currentFileName, selectedQuality, processImage]
+    []
   );
 
   const handleModeKeyDown = (e: React.KeyboardEvent) => {
@@ -1012,18 +1057,30 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
       setLogs([]);
       setErrorMsg(null);
 
-      processImage(url, 'max', name);
+      const bq: QualitySetting = selectedQuality === 'medium' ? 'high' : selectedQuality;
+      generationManager.startJob(url, name, workbenchMode, bq).catch(console.error);
     },
     [cancelCurrentRun, processImage]
   );
 
-  // Auto-run on mount (Strict mode safe)
+  // Auto-run on mount: attach to existing background job or initiate if missing
   useEffect(() => {
     if (currentImgUrl) {
-      processImage(currentImgUrl, 'max', currentFileName);
+      const activeJob = generationManager.getJob();
+      if (
+        activeJob &&
+        activeJob.sourceUrl === currentImgUrl &&
+        (activeJob.status === 'running' || activeJob.status === 'completed')
+      ) {
+        return;
+      }
+      const bq: QualitySetting = selectedQuality === 'medium' ? 'high' : selectedQuality;
+      generationManager.startJob(currentImgUrl, currentFileName, workbenchMode, bq).catch((err) => {
+        console.error('Initial background job start error:', err);
+      });
     }
     return () => {
-      cancelCurrentRun('Unmounted');
+      // Generation continues running in background GenerationManager
     };
   }, []);
 
@@ -1095,6 +1152,8 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isDraggingCol]);
+
+
 
   return (
     <div
@@ -1249,7 +1308,7 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
             className="v4-btn v4-btn--generate"
             onClick={() => {
               const bq: QualitySetting = selectedQuality === 'medium' ? 'high' : selectedQuality;
-              processImage(currentImgUrl, 'max', currentFileName, workbenchMode, bq);
+              generationManager.startJob(currentImgUrl, currentFileName, workbenchMode, bq).catch(console.error);
             }}
             disabled={isGenerating || !currentImgUrl}
             title={isGenerating ? generationStage : 'Generate vector artwork'}
@@ -1368,21 +1427,6 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
           />
         </section>
       </main>
-
-      {/* Mobile Sticky Generate Button (< 768px) */}
-      <div className="v4-mobile-sticky-generate-bar">
-        <button
-          className="v4-btn v4-btn--generate"
-          onClick={() => {
-            const bq: QualitySetting = selectedQuality === 'medium' ? 'high' : selectedQuality;
-            processImage(currentImgUrl, 'max', currentFileName, workbenchMode, bq);
-          }}
-          disabled={isGenerating || !currentImgUrl}
-          title={isGenerating ? generationStage : 'Generate vector artwork'}
-        >
-          <span>{isGenerating ? 'Generating...' : 'Generate'}</span>
-        </button>
-      </div>
 
       {/* 3. EXPORT & EMBED MODAL */}
       <V4ExportModal

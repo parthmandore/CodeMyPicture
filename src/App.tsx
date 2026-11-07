@@ -171,7 +171,6 @@ export const AppContent: React.FC = () => {
           <Suspense fallback={<StudioInitSkeleton />}>
             <V4DiagnosticWorkbench
               onBackToStudio={() => {
-                setCurrentImage(null);
                 setCurrentView('upload');
               }}
               initialImageUrl={currentImage?.objectUrl}

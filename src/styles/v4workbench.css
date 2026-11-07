@@ -2352,7 +2352,7 @@ input, textarea {
   }
 
   .v4-mobile-row-selects {
-    display: flex !important;
+    display: none !important;
     width: 100%;
     gap: 8px;
   }
@@ -2382,7 +2382,7 @@ input, textarea {
   }
 
   .v4-mobile-tabs-bar {
-    display: flex !important;
+    display: none !important;
     height: 36px;
     background-color: var(--ink);
     border-bottom: 1px solid var(--line);
@@ -2391,7 +2391,7 @@ input, textarea {
   }
 
   .v4-mobile-sticky-generate-bar {
-    display: flex !important;
+    display: none !important;
     position: fixed;
     bottom: 0;
     left: 0;

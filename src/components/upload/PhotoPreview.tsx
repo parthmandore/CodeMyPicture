@@ -24,6 +24,7 @@ import {
 } from '../studio/v4/GeometryOverlay';
 import { PreviewSkeleton } from '../common/Skeletons';
 import { useToast } from '../common/ToastContext';
+import { generationManager } from '../../services/generation';
 
 export interface PhotoPreviewProps {
   image: ValidatedImage;
@@ -47,7 +48,7 @@ export const PhotoPreview: React.FC<PhotoPreviewProps> = ({
   const [imageLoaded, setImageLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const toast = useToast();
-
+  const analyzedUrlRef = useRef<string | null>(null);
   const { detect, isReady, initialize, state: engineState, errorMessage: engineError } = useFaceDetection(true);
 
   useEffect(() => {
@@ -56,75 +57,69 @@ export const PhotoPreview: React.FC<PhotoPreviewProps> = ({
     }
   }, [engineError, toast]);
 
-  // Run face landmark detection when image or engine is ready
-  useEffect(() => {
-    let isCancelled = false;
+  // Execute landmark detection and start hidden background generation ONCE per photo
+  const runDetectionOnce = React.useCallback(async (img: HTMLImageElement) => {
+    if (analyzedUrlRef.current === image.objectUrl) return;
+    analyzedUrlRef.current = image.objectUrl;
+    setIsAnalyzing(true);
 
-    async function runDetection() {
-      if (!imgRef.current) return;
-      setIsAnalyzing(true);
-
-      try {
-        if (!isReady && engineState === 'uninitialized') {
-          await initialize();
-        }
-
-        if (imgRef.current && imgRef.current.complete) {
-          const result = await detect(imgRef.current);
-          if (!isCancelled) {
-            setDetectionResult(result);
-            // Compute full-image geometry integrating landmarks if detected
-            const geo = extractFullImageGeometry(
-              imgRef.current,
-              image.width,
-              image.height,
-              result?.landmarks || []
-            );
-            setGeometryData(geo);
-          }
-        }
-      } catch (err) {
-        console.error('Detection execution error:', err);
-      } finally {
-        if (!isCancelled) {
-          setIsAnalyzing(false);
-        }
+    try {
+      if (!isReady && engineState === 'uninitialized') {
+        await initialize();
       }
+
+      let detectedLms: any[] = [];
+      try {
+        const result = await detect(img);
+        setDetectionResult(result);
+        if (result?.landmarks && result.landmarks.length > 0) {
+          detectedLms = result.landmarks;
+        }
+      } catch (detectErr) {
+        console.warn('MediaPipe landmark detection notice:', detectErr);
+      }
+
+      // Compute full-image scene geometry
+      const geo = extractFullImageGeometry(img, image.width, image.height, detectedLms);
+      setGeometryData(geo);
+
+      // Trigger hidden background vector synthesis with pre-calculated landmarks
+      generationManager.startJob(
+        image.objectUrl,
+        image.file?.name || 'photo.jpg',
+        'painting',
+        'high',
+        detectedLms
+      ).catch((err) => {
+        console.warn('Background generation start notice:', err);
+      });
+    } catch (err) {
+      console.error('Scene calibration error:', err);
+      const fallbackGeo = extractFullImageGeometry(img, image.width, image.height, []);
+      setGeometryData(fallbackGeo);
+      generationManager.startJob(
+        image.objectUrl,
+        image.file?.name || 'photo.jpg',
+        'painting',
+        'high'
+      ).catch((e) => console.warn('Background generation fallback notice:', e));
+    } finally {
+      setIsAnalyzing(false);
     }
+  }, [image.objectUrl, image.file?.name, image.width, image.height, isReady, engineState, detect, initialize]);
 
-    if (imgRef.current && imgRef.current.complete) {
-      runDetection();
-    }
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [image.objectUrl, image.width, image.height, isReady, engineState, detect, initialize]);
-
-  const handleImageLoad = async () => {
+  const handleImageLoad = () => {
     setImageLoaded(true);
     if (imgRef.current) {
-      setIsAnalyzing(true);
-      try {
-        const result = await detect(imgRef.current);
-        setDetectionResult(result);
-        const geo = extractFullImageGeometry(
-          imgRef.current,
-          image.width,
-          image.height,
-          result?.landmarks || []
-        );
-        setGeometryData(geo);
-      } catch (err) {
-        console.error('Detection load error:', err);
-        // Fallback geometry even if face detection fails
-        const geo = extractFullImageGeometry(imgRef.current, image.width, image.height, []);
-        setGeometryData(geo);
-      } finally {
-        setIsAnalyzing(false);
-      }
+      runDetectionOnce(imgRef.current);
     }
   };
+
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete) {
+      runDetectionOnce(imgRef.current);
+    }
+  }, [runDetectionOnce]);
 
   const handleContinueClick = () => {
     onContinue(detectionResult || undefined, imgRef.current || undefined);
@@ -296,7 +291,6 @@ export const PhotoPreview: React.FC<PhotoPreviewProps> = ({
             </div>
           )}
 
-          {/* Action Row */}
           <div className="calibration-card__actions">
             <div className="calibration-card__hint">
               <Sparkles size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />
@@ -311,7 +305,7 @@ export const PhotoPreview: React.FC<PhotoPreviewProps> = ({
               title="Launch the CodeMyPicture Studio Workbench"
             >
               <Layers size={13} style={{ marginRight: '6px' }} />
-              <span>{isGenerating ? 'Synthesizing…' : 'Open in Studio Workbench'}</span>
+              <span>Open in Studio Workbench</span>
               <ArrowRight size={13} style={{ marginLeft: '6px' }} />
             </button>
           </div>

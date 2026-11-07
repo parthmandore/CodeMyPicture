@@ -1,0 +1,281 @@
+/* ==========================================================================
+   CodeMyPicture Thinking Orb Component (Working State)
+   Design: Autonomous, luminous, organic AI thinking sphere
+   Palette: Dark atelier (#14110F), vermilion (#FF4F2E), amber (#F59E0B)
+   ========================================================================== */
+
+.thinking-orb-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #14110F;
+  border-radius: var(--radius-sm, 2px);
+  overflow: hidden;
+  user-select: none;
+  box-sizing: border-box;
+  padding: 32px 24px;
+}
+
+.thinking-orb-stage {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+/* Ambient Back Glow */
+.thinking-orb-aura {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 79, 46, 0.35) 0%,
+    rgba(245, 158, 11, 0.18) 40%,
+    rgba(225, 29, 72, 0.08) 65%,
+    transparent 75%
+  );
+  filter: blur(24px);
+  animation: orbAuraPulse 3s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+/* 3D Revolving Orbital Rings */
+.thinking-orb-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  pointer-events: none;
+}
+
+.thinking-orb-ring--outer {
+  width: 148px;
+  height: 148px;
+  border-top-color: rgba(255, 79, 46, 0.7);
+  border-right-color: rgba(245, 158, 11, 0.5);
+  border-bottom-color: rgba(255, 79, 46, 0.15);
+  animation: orbRingSpin1 7s linear infinite;
+  box-shadow: 0 0 12px rgba(255, 79, 46, 0.2);
+}
+
+.thinking-orb-ring--inner {
+  width: 122px;
+  height: 122px;
+  border-left-color: rgba(245, 158, 11, 0.8);
+  border-bottom-color: rgba(255, 79, 46, 0.6);
+  border-top-color: rgba(245, 158, 11, 0.2);
+  animation: orbRingSpin2 5s linear infinite reverse;
+}
+
+/* Core Orb Sphere */
+.thinking-orb-core {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow:
+    0 0 25px rgba(255, 79, 46, 0.55),
+    0 0 50px rgba(245, 158, 11, 0.35),
+    inset 0 0 18px rgba(255, 255, 255, 0.35),
+    inset 0 -8px 16px rgba(20, 17, 15, 0.75);
+  animation: orbCoreBreathe 3.2s ease-in-out infinite alternate;
+}
+
+/* Fluid Organic Plasma Layers inside the Orb */
+.thinking-orb-fluid-layer {
+  position: absolute;
+  inset: -20%;
+  border-radius: 42% 58% 62% 38% / 45% 45% 55% 55%;
+  mix-blend-mode: screen;
+}
+
+.thinking-orb-fluid-layer--1 {
+  background: conic-gradient(
+    from 0deg,
+    #FF4F2E 0deg,
+    #F59E0B 90deg,
+    #E11D48 180deg,
+    #FF7A59 270deg,
+    #FF4F2E 360deg
+  );
+  filter: blur(6px);
+  animation: orbFluidRotate1 6s linear infinite;
+}
+
+.thinking-orb-fluid-layer--2 {
+  background: radial-gradient(
+    circle at 35% 35%,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(245, 158, 11, 0.6) 30%,
+    rgba(255, 79, 46, 0.8) 60%,
+    rgba(180, 20, 40, 0.9) 100%
+  );
+  border-radius: 55% 45% 40% 60% / 50% 60% 40% 50%;
+  filter: blur(4px);
+  animation: orbFluidRotate2 4s ease-in-out infinite alternate;
+}
+
+/* Glass Specular Glint */
+.thinking-orb-specular {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  width: 28px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  transform: rotate(-25deg);
+  pointer-events: none;
+}
+
+/* Ambient Orbiting Micro-particles */
+.thinking-orb-particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.thinking-orb-particle--1 {
+  width: 4px;
+  height: 4px;
+  background-color: var(--accent, #FF4F2E);
+  box-shadow: 0 0 6px var(--accent, #FF4F2E);
+  animation: orbParticleOrbit 4.5s linear infinite;
+}
+
+.thinking-orb-particle--2 {
+  width: 3px;
+  height: 3px;
+  background-color: #F59E0B;
+  box-shadow: 0 0 6px #F59E0B;
+  animation: orbParticleOrbit 6s linear infinite reverse;
+}
+
+.thinking-orb-particle--3 {
+  width: 2px;
+  height: 2px;
+  background-color: #FFF;
+  box-shadow: 0 0 4px #FFF;
+  animation: orbParticleOrbit 3.5s ease-in-out infinite alternate;
+}
+
+/* Status & Telemetry HUD */
+.thinking-orb-hud {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  max-width: 340px;
+}
+
+.thinking-orb-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  background-color: rgba(28, 24, 21, 0.94);
+  border: 1px solid var(--line, #2E2824);
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  font-size: 11px;
+}
+
+.thinking-orb-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--accent, #FF4F2E);
+  box-shadow: 0 0 8px var(--accent, #FF4F2E);
+  animation: orbLiveDot 1.2s ease-in-out infinite alternate;
+}
+
+.thinking-orb-status-title {
+  color: var(--paper, #F5F1EB);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.thinking-orb-timer {
+  color: var(--accent, #FF4F2E);
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.thinking-orb-mode-tag {
+  font-size: 10px;
+  color: var(--paper-muted, #8A8177);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.thinking-orb-stage-detail {
+  font-size: 11px;
+  color: var(--paper-dim, #B5ABA0);
+  line-height: 1.4;
+  min-height: 16px;
+  animation: orbFadeText 0.3s ease-out;
+}
+
+/* Keyframe Animations */
+@keyframes orbAuraPulse {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  100% { transform: scale(1.12); opacity: 1; }
+}
+
+@keyframes orbRingSpin1 {
+  0% { transform: rotate(0deg) scaleX(1) scaleY(0.7); }
+  50% { transform: rotate(180deg) scaleX(0.8) scaleY(1); }
+  100% { transform: rotate(360deg) scaleX(1) scaleY(0.7); }
+}
+
+@keyframes orbRingSpin2 {
+  0% { transform: rotate(360deg) scaleX(0.75) scaleY(1); }
+  50% { transform: rotate(180deg) scaleX(1) scaleY(0.85); }
+  100% { transform: rotate(0deg) scaleX(0.75) scaleY(1); }
+}
+
+@keyframes orbCoreBreathe {
+  0% { transform: scale(0.95); }
+  100% { transform: scale(1.05); }
+}
+
+@keyframes orbFluidRotate1 {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes orbFluidRotate2 {
+  0% { transform: rotate(0deg) scale(0.95); }
+  50% { transform: rotate(180deg) scale(1.08); }
+  100% { transform: rotate(360deg) scale(0.95); }
+}
+
+@keyframes orbLiveDot {
+  0% { opacity: 0.4; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes orbParticleOrbit {
+  0% { transform: rotate(0deg) translateX(68px) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(68px) rotate(-360deg); }
+}
+
+@keyframes orbFadeText {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
