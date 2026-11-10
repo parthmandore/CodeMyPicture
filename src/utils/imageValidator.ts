@@ -88,7 +88,7 @@ export async function validateImageFile(
       error: createUploadError(
         'UNSUPPORTED_TYPE',
         `Unsupported file format: ${file.type || 'unknown format'}`,
-        'CodeMyFace supports standard portrait images in JPEG, PNG, or WebP formats only.'
+        'CodeMyPicture supports standard portrait images in JPEG, PNG, or WebP formats only.'
       ),
     };
   }

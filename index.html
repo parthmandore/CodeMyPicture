@@ -13,8 +13,8 @@
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#14110F" />
-    <title>CodeMyPicture — In-Browser Photograph to Vector &amp; SVG Studio</title>
-    <meta name="description" content="Convert portrait and scene photographs into clean, scalable SVG vector code directly in your browser. Features digital Painting and photographic Recreation modes with 100% client-side privacy." />
+    <title>CodeMyPicture — Transform Photos into SVG Artwork</title>
+    <meta name="description" content="Transform photographs into beautiful, editable SVG artwork directly in your browser. Create digital paintings and faithful vector recreations privately, without uploading images." />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <link rel="canonical" href="https://codemypicture.netlify.app/" />
 
@@ -23,8 +23,8 @@
     <meta property="og:url" content="https://codemypicture.netlify.app/" />
     <meta property="og:site_name" content="CodeMyPicture" />
     <meta property="og:locale" content="en_US" />
-    <meta property="og:title" content="CodeMyPicture — In-Browser Photograph to Vector &amp; SVG Studio" />
-    <meta property="og:description" content="Convert portrait and scene photographs into clean, scalable SVG vector code directly in your browser. Features digital Painting and photographic Recreation modes with 100% client-side privacy." />
+    <meta property="og:title" content="CodeMyPicture — Transform Photos into SVG Artwork" />
+    <meta property="og:description" content="Transform photographs into beautiful, editable SVG artwork directly in your browser. Create digital paintings and faithful vector recreations privately, without uploading images." />
     <meta property="og:image" content="https://codemypicture.netlify.app/og-image.png" />
     <meta property="og:image:secure_url" content="https://codemypicture.netlify.app/og-image.png" />
     <meta property="og:image:type" content="image/png" />
@@ -35,8 +35,8 @@
     <!-- Twitter / X Card Metadata -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content="https://codemypicture.netlify.app/" />
-    <meta name="twitter:title" content="CodeMyPicture — In-Browser Photograph to Vector &amp; SVG Studio" />
-    <meta name="twitter:description" content="Convert portrait and scene photographs into clean, scalable SVG vector code directly in your browser. Features digital Painting and photographic Recreation modes with 100% client-side privacy." />
+    <meta name="twitter:title" content="CodeMyPicture — Transform Photos into SVG Artwork" />
+    <meta name="twitter:description" content="Transform photographs into beautiful, editable SVG artwork directly in your browser. Create digital paintings and faithful vector recreations privately, without uploading images." />
     <meta name="twitter:image" content="https://codemypicture.netlify.app/twitter-image.png" />
     <meta name="twitter:image:alt" content="CodeMyPicture creative coding studio preview showing photograph to SVG vector reconstruction interface" />
 
@@ -50,16 +50,18 @@
           "@id": "https://codemypicture.netlify.app/#website",
           "url": "https://codemypicture.netlify.app/",
           "name": "CodeMyPicture",
-          "description": "In-browser photograph to Scalable Vector Graphics (SVG) reconstruction and creative coding studio.",
+          "alternateName": ["Code My Picture", "CodeMyPicture AI", "CodeMyPicture SVG"],
+          "description": "Transform photographs into beautiful, editable SVG artwork directly in your browser. Create digital paintings and faithful vector recreations privately, without uploading images.",
           "inLanguage": "en-US"
         },
         {
           "@type": "SoftwareApplication",
           "@id": "https://codemypicture.netlify.app/#software",
           "name": "CodeMyPicture",
+          "alternateName": ["Code My Picture", "CodeMyPicture AI"],
           "url": "https://codemypicture.netlify.app/",
-          "description": "Client-side creative coding application that converts photographs into clean, editable SVG code directly inside the browser using WebAssembly and Web Workers.",
-          "applicationCategory": "MultimediaApplication",
+          "description": "Transform photographs into beautiful, editable SVG artwork directly in your browser. Create digital paintings and faithful vector recreations privately, without uploading images.",
+          "applicationCategory": "DesignApplication",
           "operatingSystem": "All (Modern Web Browser)",
           "browserRequirements": "Requires WebAssembly and modern browser with Web Worker support",
           "offers": {
@@ -68,6 +70,7 @@
             "priceCurrency": "USD"
           },
           "featureList": [
+            "Photo to SVG artwork and vector code synthesis",
             "In-browser SVG vector synthesis",
             "Painting mode multi-scale planar reconstruction",
             "Photographic recreation high-fidelity contour tracking",
@@ -98,7 +101,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Semantic Static Crawl Fallback (Hydrated and replaced by React on DOM mount) -->
+    <div id="root">
+      <header class="v4-header studio-header-unified">
+        <div class="v4-wordmark">
+          CodeMy<em class="v4-wordmark-face">Picture</em>
+        </div>
+      </header>
+      <main class="studio-main-content">
+        <div class="studio-page-container">
+          <div class="studio-hero">
+            <div class="studio-hero__badge mono">
+              <span class="studio-hero__badge-dot"></span>
+              <span>SYSTEM // VECTOR RECONSTRUCTION &amp; CREATIVE CODING STUDIO</span>
+            </div>
+            <h1 class="studio-hero__title">
+              Reconstruct photographs into <em class="studio-hero__title-accent">pure vector code</em>.
+            </h1>
+            <p class="studio-hero__subtitle">
+              CodeMyPicture transforms portrait and scene photographs into genuine, editable SVG artwork directly inside your browser. Choose expressive digital painting brushwork or crisp photographic reconstruction — executed entirely in local device memory without uploading images.
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
