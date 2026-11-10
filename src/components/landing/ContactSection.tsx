@@ -1,14 +1,17 @@
-import React, { useState, useRef } from 'react';
-import { Send, CheckCircle2, AlertTriangle, Mail, ShieldCheck, User, MessageSquare, Tag } from 'lucide-react';
+import React, { useState } from 'react';
+import { Send, Mail, User, MessageSquare, Tag, Copy, Check, ExternalLink, Info } from 'lucide-react';
 import { useToast } from '../common/ToastContext';
 import analytics from '../../services/analytics';
 
+// ─── Contact destination ──────────────────────────────────────────────────────
+const CONTACT_EMAIL = 'mandoreparth14@gmail.com';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface FormState {
   name: string;
   email: string;
   subject: string;
   message: string;
-  botField: string;
 }
 
 interface FormErrors {
@@ -18,26 +21,48 @@ interface FormErrors {
   message?: string;
 }
 
-const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+// ─── Validation ───────────────────────────────────────────────────────────────
+const EMAIL_REGEX =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
+// ─── Mailto builder ───────────────────────────────────────────────────────────
+/**
+ * Builds a fully URL-encoded mailto: link.
+ * encodeURIComponent handles special chars, unicode, and newlines.
+ */
+function buildMailtoLink(name: string, email: string, subject: string, message: string): string {
+  const body = [
+    `From: ${name} <${email}>`,
+    '',
+    message,
+  ].join('\n');
+
+  const params = new URLSearchParams();
+  params.set('subject', subject);
+  params.set('body', body);
+
+  // URLSearchParams uses + for spaces; mailto: requires %20
+  const encoded = params.toString().replace(/\+/g, '%20');
+  return `mailto:${encodeURIComponent(CONTACT_EMAIL)}?${encoded}`;
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export const ContactSection: React.FC = () => {
   const toast = useToast();
-  const mountTimeRef = useRef<number>(Date.now());
 
   const [formData, setFormData] = useState<FormState>({
     name: '',
     email: '',
     subject: '',
     message: '',
-    botField: '',
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [submittedSuccess, setSubmittedSuccess] = useState<boolean>(false);
-  const [responseMessage, setResponseMessage] = useState<string>('');
-  const [isSimulated, setIsSimulated] = useState<boolean>(false);
+  const [mailtoOpened, setMailtoOpened] = useState(false);
+  const [mailtoLink, setMailtoLink] = useState('');
+  const [emailCopied, setEmailCopied] = useState(false);
 
+  // ── Validation ──────────────────────────────────────────────────────────────
   const validate = (): boolean => {
     const errs: FormErrors = {};
 
@@ -71,6 +96,7 @@ export const ContactSection: React.FC = () => {
     return Object.keys(errs).length === 0;
   };
 
+  // ── Handlers ────────────────────────────────────────────────────────────────
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -79,7 +105,7 @@ export const ContactSection: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validate()) {
@@ -87,91 +113,224 @@ export const ContactSection: React.FC = () => {
       return;
     }
 
-    setIsSubmitting(true);
-    setResponseMessage('');
+    const link = buildMailtoLink(
+      formData.name.trim(),
+      formData.email.trim(),
+      formData.subject.trim(),
+      formData.message.trim()
+    );
 
+    setMailtoLink(link);
+    setMailtoOpened(true);
+
+    // Open the mailto link
+    window.location.href = link;
+
+    analytics.trackEvent('contact_form_submitted', { has_subject: true });
+  };
+
+  const handleCopyEmail = async () => {
     try {
-      // Primary serverless endpoint, with fallback if in local dev
-      let endpoint = '/api/contact';
-      let res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          timestamp: mountTimeRef.current,
-        }),
-      });
-
-      // If /api/contact is not mapped in dev server, try direct function endpoint
-      if (res.status === 404) {
-        endpoint = '/.netlify/functions/contact';
-        res = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...formData,
-            timestamp: mountTimeRef.current,
-          }),
-        });
-      }
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(data.error || `Server responded with status ${res.status}`);
-      }
-
-      setSubmittedSuccess(true);
-      setIsSimulated(Boolean(data.simulated));
-      setResponseMessage(
-        data.message || 'Your inquiry has been received. Thank you for contacting CodeMyPicture.'
-      );
-
-      // Track conversion event (Zero PII transmitted)
-      analytics.trackEvent('contact_form_submitted', {
-        simulated: Boolean(data.simulated),
-        has_subject: true,
-      });
-
-      toast.success('Inquiry submitted successfully.');
-    } catch (err: any) {
-      console.error('Contact submission error:', err);
-      const msg = err?.message || 'Failed to send message. Please try again.';
-      setResponseMessage(msg);
-      toast.error(msg);
-    } finally {
-      setIsSubmitting(false);
+      await navigator.clipboard.writeText(CONTACT_EMAIL);
+      setEmailCopied(true);
+      toast.success('Email address copied to clipboard.');
+      setTimeout(() => setEmailCopied(false), 2500);
+    } catch {
+      // Clipboard API blocked (e.g. HTTP or permissions)
+      toast.error('Could not access clipboard. Please copy the address manually.');
     }
   };
 
   const handleReset = () => {
-    setFormData({
-      name: '',
-      email: '',
-      subject: '',
-      message: '',
-      botField: '',
-    });
+    setFormData({ name: '', email: '', subject: '', message: '' });
     setErrors({});
-    setSubmittedSuccess(false);
-    setResponseMessage('');
-    setIsSimulated(false);
-    mountTimeRef.current = Date.now();
+    setMailtoOpened(false);
+    setMailtoLink('');
   };
 
+  // ── Shared input style ──────────────────────────────────────────────────────
+  const inputStyle = (hasError: boolean): React.CSSProperties => ({
+    width: '100%',
+    backgroundColor: 'var(--base)',
+    border: hasError ? '1px solid var(--rose)' : '1px solid var(--line)',
+    borderRadius: '3px',
+    padding: '10px 14px',
+    color: 'var(--paper)',
+    fontSize: '13px',
+    boxSizing: 'border-box',
+    outline: 'none',
+    transition: 'border-color 150ms',
+  });
+
+  const labelStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    fontSize: '11px',
+    color: 'var(--paper-dim)',
+    marginBottom: '8px',
+  };
+
+  const errorStyle: React.CSSProperties = {
+    fontSize: '11px',
+    color: 'var(--rose)',
+    marginTop: '4px',
+  };
+
+  // ── Post-open state ─────────────────────────────────────────────────────────
+  if (mailtoOpened) {
+    return (
+      <section id="contact" className="landing-section landing-contact-section" aria-labelledby="contact-heading">
+        <div className="landing-section-header">
+          <div className="landing-section-badge mono">
+            <Mail size={13} style={{ color: 'var(--accent)' }} />
+            <span>CONTACT &amp; TECHNICAL FEEDBACK</span>
+          </div>
+          <h2 id="contact-heading" className="landing-section-title">
+            Connect with the Atelier Engineering Team
+          </h2>
+        </div>
+
+        <div
+          className="contact-card-atelier"
+          style={{
+            backgroundColor: 'var(--raised)',
+            border: '1px solid var(--line-strong)',
+            borderRadius: '4px',
+            maxWidth: '720px',
+            margin: '0 auto',
+            padding: '36px 32px',
+            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.45)',
+          }}
+        >
+          {/* ── Instruction banner ── */}
+          <div
+            className="mono"
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+              backgroundColor: 'rgba(255, 79, 46, 0.08)',
+              border: '1px solid rgba(255, 79, 46, 0.25)',
+              borderRadius: '3px',
+              padding: '14px 16px',
+              marginBottom: '28px',
+            }}
+          >
+            <Info size={15} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: '1px' }} />
+            <div style={{ fontSize: '12px', lineHeight: 1.65, color: 'var(--paper)' }}>
+              <strong style={{ display: 'block', marginBottom: '4px', color: 'var(--accent)' }}>
+                ACTION REQUIRED — YOUR EMAIL APPLICATION SHOULD HAVE OPENED
+              </strong>
+              Your message has been pre-filled in your default email client. Please review and
+              click <strong>Send</strong> inside your email application to deliver the inquiry.
+              <br />
+              <span style={{ color: 'var(--paper-dim)' }}>
+                If the email client did not open, use the direct link or copy the address below.
+              </span>
+            </div>
+          </div>
+
+          {/* ── Message preview ── */}
+          <div
+            style={{
+              backgroundColor: 'var(--base)',
+              border: '1px solid var(--line)',
+              borderRadius: '3px',
+              padding: '16px',
+              marginBottom: '24px',
+              fontSize: '12px',
+              lineHeight: 1.6,
+              color: 'var(--paper-dim)',
+            }}
+          >
+            <div className="mono" style={{ color: 'var(--paper-dim)', marginBottom: '10px', fontSize: '10px' }}>
+              MESSAGE PREVIEW
+            </div>
+            <div><strong style={{ color: 'var(--paper)' }}>To:</strong> {CONTACT_EMAIL}</div>
+            <div><strong style={{ color: 'var(--paper)' }}>Subject:</strong> {formData.subject}</div>
+            <div><strong style={{ color: 'var(--paper)' }}>From:</strong> {formData.name} &lt;{formData.email}&gt;</div>
+            <div
+              style={{
+                marginTop: '10px',
+                borderTop: '1px solid var(--line)',
+                paddingTop: '10px',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {formData.message}
+            </div>
+          </div>
+
+          {/* ── Action buttons ── */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '20px' }}>
+            {/* Re-open mailto */}
+            <a
+              href={mailtoLink}
+              className="v4-btn v4-btn--primary"
+              style={{ padding: '9px 20px', fontSize: '12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              aria-label="Open email application again"
+            >
+              <ExternalLink size={12} />
+              <span>Open Email Client</span>
+            </a>
+
+            {/* Copy email */}
+            <button
+              type="button"
+              onClick={handleCopyEmail}
+              className="v4-btn"
+              style={{ padding: '9px 20px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              aria-label="Copy contact email address"
+            >
+              {emailCopied ? <Check size={12} /> : <Copy size={12} />}
+              <span>{emailCopied ? 'Copied!' : 'Copy Email Address'}</span>
+            </button>
+
+            {/* Send another */}
+            <button
+              type="button"
+              onClick={handleReset}
+              className="v4-btn"
+              style={{ padding: '9px 20px', fontSize: '12px' }}
+            >
+              <span>Edit &amp; Resend</span>
+            </button>
+          </div>
+
+          {/* ── Fallback direct link ── */}
+          <div
+            className="mono"
+            style={{ fontSize: '11px', color: 'var(--paper-dim)', borderTop: '1px solid var(--line)', paddingTop: '16px' }}
+          >
+            Direct email address:{' '}
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              style={{ color: 'var(--accent)', textDecoration: 'none' }}
+            >
+              {CONTACT_EMAIL}
+            </a>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // ── Form state ──────────────────────────────────────────────────────────────
   return (
     <section id="contact" className="landing-section landing-contact-section" aria-labelledby="contact-heading">
       <div className="landing-section-header">
         <div className="landing-section-badge mono">
           <Mail size={13} style={{ color: 'var(--accent)' }} />
-          <span>CONTACT & TECHNICAL FEEDBACK</span>
+          <span>CONTACT &amp; TECHNICAL FEEDBACK</span>
         </div>
         <h2 id="contact-heading" className="landing-section-title">
           Connect with the Atelier Engineering Team
         </h2>
         <p className="landing-section-desc">
           Have inquiries regarding vector synthesis algorithms, enterprise licensing, or feature proposals?
-          Send a direct message through our spam-protected serverless gateway.
+          Fill the form below — your default email application will open with the message pre-filled.
         </p>
       </div>
 
@@ -187,310 +346,174 @@ export const ContactSection: React.FC = () => {
           boxShadow: '0 12px 36px rgba(0, 0, 0, 0.45)',
         }}
       >
-        {submittedSuccess ? (
+        <form onSubmit={handleSubmit} noValidate>
+          {/* Name + Email row */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '20px',
+              marginBottom: '20px',
+            }}
+          >
+            {/* Name */}
+            <div>
+              <label htmlFor="contact-name" className="mono" style={labelStyle}>
+                <User size={12} />
+                <span>NAME OR ORGANIZATION *</span>
+              </label>
+              <input
+                id="contact-name"
+                type="text"
+                name="name"
+                placeholder="Ada Lovelace"
+                required
+                maxLength={80}
+                value={formData.name}
+                onChange={handleChange}
+                aria-invalid={Boolean(errors.name)}
+                aria-describedby={errors.name ? 'contact-name-error' : undefined}
+                style={inputStyle(Boolean(errors.name))}
+              />
+              {errors.name && (
+                <div id="contact-name-error" className="mono" style={errorStyle}>
+                  {errors.name}
+                </div>
+              )}
+            </div>
+
+            {/* Email */}
+            <div>
+              <label htmlFor="contact-email" className="mono" style={labelStyle}>
+                <Mail size={12} />
+                <span>REPLY EMAIL ADDRESS *</span>
+              </label>
+              <input
+                id="contact-email"
+                type="email"
+                name="email"
+                placeholder="developer@example.com"
+                required
+                maxLength={100}
+                value={formData.email}
+                onChange={handleChange}
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={errors.email ? 'contact-email-error' : undefined}
+                style={inputStyle(Boolean(errors.email))}
+              />
+              {errors.email && (
+                <div id="contact-email-error" className="mono" style={errorStyle}>
+                  {errors.email}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Subject */}
+          <div style={{ marginBottom: '20px' }}>
+            <label htmlFor="contact-subject" className="mono" style={labelStyle}>
+              <Tag size={12} />
+              <span>SUBJECT *</span>
+            </label>
+            <input
+              id="contact-subject"
+              type="text"
+              name="subject"
+              placeholder="Inquiry regarding vector contour quantization"
+              required
+              maxLength={120}
+              value={formData.subject}
+              onChange={handleChange}
+              aria-invalid={Boolean(errors.subject)}
+              aria-describedby={errors.subject ? 'contact-subject-error' : undefined}
+              style={inputStyle(Boolean(errors.subject))}
+            />
+            {errors.subject && (
+              <div id="contact-subject-error" className="mono" style={errorStyle}>
+                {errors.subject}
+              </div>
+            )}
+          </div>
+
+          {/* Message */}
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <label htmlFor="contact-message" className="mono" style={{ ...labelStyle, marginBottom: 0 }}>
+                <MessageSquare size={12} />
+                <span>INQUIRY MESSAGE *</span>
+              </label>
+              <span className="mono" style={{ fontSize: '10px', color: 'var(--paper-dim)' }}>
+                {formData.message.length} / 3000
+              </span>
+            </div>
+            <textarea
+              id="contact-message"
+              name="message"
+              rows={5}
+              placeholder="Describe your inquiry, bug report, or feature request in detail..."
+              required
+              maxLength={3000}
+              value={formData.message}
+              onChange={handleChange}
+              aria-invalid={Boolean(errors.message)}
+              aria-describedby={errors.message ? 'contact-message-error' : undefined}
+              style={{
+                ...inputStyle(Boolean(errors.message)),
+                lineHeight: 1.6,
+                resize: 'vertical',
+                minHeight: '120px',
+              }}
+            />
+            {errors.message && (
+              <div id="contact-message-error" className="mono" style={errorStyle}>
+                {errors.message}
+              </div>
+            )}
+          </div>
+
+          {/* Action bar */}
           <div
             style={{
               display: 'flex',
-              flexDirection: 'column',
               alignItems: 'center',
-              textAlign: 'center',
-              padding: '24px 12px',
-              gap: '16px',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+              borderTop: '1px solid var(--line)',
+              paddingTop: '20px',
             }}
           >
-            <div
-              style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(135, 169, 107, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--moss)',
-              }}
-            >
-              <CheckCircle2 size={24} />
+            {/* How it works hint */}
+            <div className="mono" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--paper-dim)' }}>
+              <Mail size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+              <span>Opens your email client with message pre-filled</span>
             </div>
 
-            <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--paper)' }}>
-              Message Transmitted
-            </h3>
-
-            <p style={{ margin: 0, color: 'var(--paper-dim)', fontSize: '13px', maxWidth: '520px', lineHeight: 1.6 }}>
-              {responseMessage}
-            </p>
-
-            {isSimulated && (
-              <div
-                className="mono"
-                style={{
-                  fontSize: '11px',
-                  backgroundColor: 'rgba(255, 179, 71, 0.1)',
-                  border: '1px solid rgba(255, 179, 71, 0.3)',
-                  color: 'var(--amber)',
-                  padding: '10px 14px',
-                  borderRadius: '3px',
-                  maxWidth: '560px',
-                  textAlign: 'left',
-                }}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {/* Copy email fallback */}
+              <button
+                type="button"
+                onClick={handleCopyEmail}
+                className="v4-btn"
+                style={{ padding: '9px 16px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                aria-label="Copy contact email address"
               >
-                <div style={{ fontWeight: 600, marginBottom: '4px' }}>[DIAGNOSTIC NOTICE]</div>
-                Form validation, rate-limiting, and payload sanitization executed successfully. Live email inbox delivery will activate once <code>RESEND_API_KEY</code> and <code>CONTACT_TO_EMAIL</code> are configured in Netlify environment variables.
-              </div>
-            )}
+                {emailCopied ? <Check size={12} /> : <Copy size={12} />}
+                <span>{emailCopied ? 'Copied!' : 'Copy Email'}</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={handleReset}
-              className="v4-btn v4-btn--primary"
-              style={{ marginTop: '12px' }}
-            >
-              <span>Send Another Message</span>
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} noValidate>
-            {/* Honeypot field for bot trap */}
-            <div style={{ display: 'none' }} aria-hidden="true">
-              <label htmlFor="contact-bot-field">Do not fill this field</label>
-              <input
-                id="contact-bot-field"
-                type="text"
-                name="botField"
-                tabIndex={-1}
-                autoComplete="off"
-                value={formData.botField}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '20px' }}>
-              {/* Name Field */}
-              <div>
-                <label
-                  htmlFor="contact-name"
-                  className="mono"
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--paper-dim)', marginBottom: '8px' }}
-                >
-                  <User size={12} />
-                  <span>NAME OR ORGANIZATION *</span>
-                </label>
-                <input
-                  id="contact-name"
-                  type="text"
-                  name="name"
-                  placeholder="Ada Lovelace"
-                  required
-                  maxLength={80}
-                  value={formData.name}
-                  onChange={handleChange}
-                  aria-invalid={Boolean(errors.name)}
-                  aria-describedby={errors.name ? 'contact-name-error' : undefined}
-                  style={{
-                    width: '100%',
-                    backgroundColor: 'var(--base)',
-                    border: errors.name ? '1px solid var(--rose)' : '1px solid var(--line)',
-                    borderRadius: '3px',
-                    padding: '10px 14px',
-                    color: 'var(--paper)',
-                    fontSize: '13px',
-                    boxSizing: 'border-box',
-                  }}
-                />
-                {errors.name && (
-                  <div id="contact-name-error" className="mono" style={{ fontSize: '11px', color: 'var(--rose)', marginTop: '4px' }}>
-                    {errors.name}
-                  </div>
-                )}
-              </div>
-
-              {/* Email Field */}
-              <div>
-                <label
-                  htmlFor="contact-email"
-                  className="mono"
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--paper-dim)', marginBottom: '8px' }}
-                >
-                  <Mail size={12} />
-                  <span>REPLY EMAIL ADDRESS *</span>
-                </label>
-                <input
-                  id="contact-email"
-                  type="email"
-                  name="email"
-                  placeholder="developer@example.com"
-                  required
-                  maxLength={100}
-                  value={formData.email}
-                  onChange={handleChange}
-                  aria-invalid={Boolean(errors.email)}
-                  aria-describedby={errors.email ? 'contact-email-error' : undefined}
-                  style={{
-                    width: '100%',
-                    backgroundColor: 'var(--base)',
-                    border: errors.email ? '1px solid var(--rose)' : '1px solid var(--line)',
-                    borderRadius: '3px',
-                    padding: '10px 14px',
-                    color: 'var(--paper)',
-                    fontSize: '13px',
-                    boxSizing: 'border-box',
-                  }}
-                />
-                {errors.email && (
-                  <div id="contact-email-error" className="mono" style={{ fontSize: '11px', color: 'var(--rose)', marginTop: '4px' }}>
-                    {errors.email}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Subject Field */}
-            <div style={{ marginBottom: '20px' }}>
-              <label
-                htmlFor="contact-subject"
-                className="mono"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--paper-dim)', marginBottom: '8px' }}
-              >
-                <Tag size={12} />
-                <span>SUBJECT *</span>
-              </label>
-              <input
-                id="contact-subject"
-                type="text"
-                name="subject"
-                placeholder="Inquiry regarding vector contour quantization"
-                required
-                maxLength={120}
-                value={formData.subject}
-                onChange={handleChange}
-                aria-invalid={Boolean(errors.subject)}
-                aria-describedby={errors.subject ? 'contact-subject-error' : undefined}
-                style={{
-                  width: '100%',
-                  backgroundColor: 'var(--base)',
-                  border: errors.subject ? '1px solid var(--rose)' : '1px solid var(--line)',
-                  borderRadius: '3px',
-                  padding: '10px 14px',
-                  color: 'var(--paper)',
-                  fontSize: '13px',
-                  boxSizing: 'border-box',
-                }}
-              />
-              {errors.subject && (
-                <div id="contact-subject-error" className="mono" style={{ fontSize: '11px', color: 'var(--rose)', marginTop: '4px' }}>
-                  {errors.subject}
-                </div>
-              )}
-            </div>
-
-            {/* Message Field */}
-            <div style={{ marginBottom: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <label
-                  htmlFor="contact-message"
-                  className="mono"
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--paper-dim)' }}
-                >
-                  <MessageSquare size={12} />
-                  <span>INQUIRY MESSAGE *</span>
-                </label>
-                <span className="mono" style={{ fontSize: '10px', color: 'var(--paper-dim)' }}>
-                  {formData.message.length} / 3000
-                </span>
-              </div>
-              <textarea
-                id="contact-message"
-                name="message"
-                rows={5}
-                placeholder="Describe your inquiry, bug report, or feature request in detail..."
-                required
-                maxLength={3000}
-                value={formData.message}
-                onChange={handleChange}
-                aria-invalid={Boolean(errors.message)}
-                aria-describedby={errors.message ? 'contact-message-error' : undefined}
-                style={{
-                  width: '100%',
-                  backgroundColor: 'var(--base)',
-                  border: errors.message ? '1px solid var(--rose)' : '1px solid var(--line)',
-                  borderRadius: '3px',
-                  padding: '12px 14px',
-                  color: 'var(--paper)',
-                  fontSize: '13px',
-                  lineHeight: 1.6,
-                  resize: 'vertical',
-                  boxSizing: 'border-box',
-                  minHeight: '120px',
-                }}
-              />
-              {errors.message && (
-                <div id="contact-message-error" className="mono" style={{ fontSize: '11px', color: 'var(--rose)', marginTop: '4px' }}>
-                  {errors.message}
-                </div>
-              )}
-            </div>
-
-            {/* Global Error Notice if any */}
-            {responseMessage && !submittedSuccess && (
-              <div
-                className="mono"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  backgroundColor: 'rgba(235, 77, 75, 0.1)',
-                  border: '1px solid rgba(235, 77, 75, 0.3)',
-                  color: 'var(--rose)',
-                  padding: '10px 14px',
-                  borderRadius: '3px',
-                  marginBottom: '20px',
-                  fontSize: '12px',
-                }}
-              >
-                <AlertTriangle size={14} style={{ flexShrink: 0 }} />
-                <span>{responseMessage}</span>
-              </div>
-            )}
-
-            {/* Action Bar */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '12px',
-                borderTop: '1px solid var(--line)',
-                paddingTop: '20px',
-              }}
-            >
-              <div className="mono" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--paper-dim)' }}>
-                <ShieldCheck size={13} style={{ color: 'var(--moss)' }} />
-                <span>SPAM & INJECTION PROTECTED GATEWAY</span>
-              </div>
-
+              {/* Submit */}
               <button
                 type="submit"
-                disabled={isSubmitting}
                 className="v4-btn v4-btn--primary"
-                style={{ padding: '9px 24px', fontSize: '12px' }}
+                style={{ padding: '9px 24px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                {isSubmitting ? (
-                  <>
-                    <span className="analyzing-hud-spinner" style={{ width: 12, height: 12, marginRight: 6 }} aria-hidden="true" />
-                    <span>Transmitting…</span>
-                  </>
-                ) : (
-                  <>
-                    <Send size={12} style={{ marginRight: '6px' }} />
-                    <span>Transmit Inquiry</span>
-                  </>
-                )}
+                <Send size={12} />
+                <span>Open Email &amp; Send</span>
               </button>
             </div>
-          </form>
-        )}
+          </div>
+        </form>
       </div>
     </section>
   );
