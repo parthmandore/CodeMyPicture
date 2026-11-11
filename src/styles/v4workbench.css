@@ -176,6 +176,11 @@ input, textarea {
   gap: 8px;
 }
 
+/* Mobile-only elements: strictly hidden on desktop */
+.v4-mobile-tabs-bar {
+  display: none !important;
+}
+
 /* ==========================================================================
    Atelier Button & Input Tokens
    Radius 2px max, 1px hairline borders, plain text. Exactly one solid accent button.
@@ -2342,29 +2347,58 @@ input, textarea {
     min-height: 48px;
     max-height: none !important;
     flex-wrap: wrap;
-    padding: 8px 12px;
-    gap: 8px;
+    padding: 6px 10px;
+    gap: 6px;
   }
 
-  .v4-header__center,
+  .v4-header__left {
+    flex: 1 1 auto;
+  }
+
   .v4-header__right--desktop {
+    display: flex !important;
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
+  .v4-header__right--desktop .v4-btn {
+    height: 30px !important;
+    padding: 0 8px !important;
+    font-size: 11px !important;
+  }
+
+  .v4-btn--upload-text {
     display: none !important;
   }
 
-  .v4-mobile-row-selects {
-    display: none !important;
+  .v4-btn--upload-icon {
+    display: inline-flex !important;
+  }
+
+  .v4-header__center {
+    display: flex !important;
     width: 100%;
-    gap: 8px;
+    order: 2;
+    gap: 6px;
+    justify-content: space-between;
   }
 
-  .v4-mobile-row-selects .v4-select {
+  .v4-header__center .v4-segmented-control {
     flex: 1;
-    height: 32px;
+    min-width: 0;
+  }
+
+  .v4-header__center .v4-segmented-control__item {
+    padding: 0 6px !important;
+    font-size: 11px !important;
+    height: 28px !important;
+    text-align: center;
+    justify-content: center;
   }
 
   .v4-workspace {
     flex-direction: column;
-    height: calc(100vh - 148px) !important;
+    height: calc(100vh - 128px) !important;
   }
 
   .v4-pane-divider {
@@ -2382,31 +2416,48 @@ input, textarea {
   }
 
   .v4-mobile-tabs-bar {
-    display: none !important;
-    height: 36px;
+    display: flex !important;
+    height: 38px;
     background-color: var(--ink);
     border-bottom: 1px solid var(--line);
     padding: 0 8px;
-    gap: 4px;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .v4-mobile-tab-btn {
+    flex: 1;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--paper-dim);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .v4-mobile-tab-btn.is-active {
+    color: var(--paper);
+    background-color: var(--surface);
+    border-color: var(--line);
+    border-bottom: 2px solid var(--vermilion);
+  }
+
+  .v4-mobile-tab-btn--export {
+    background-color: var(--surface);
+    border-color: var(--line);
+    color: var(--paper);
+    flex: 0 0 auto;
+    padding: 0 12px;
   }
 
   .v4-mobile-sticky-generate-bar {
     display: none !important;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 48px;
-    background-color: var(--ink);
-    border-top: 1px solid var(--line);
-    padding: 4px 8px;
-    z-index: 100;
-    box-sizing: border-box;
-  }
-
-  .v4-mobile-sticky-generate-bar .v4-btn--generate {
-    width: 100% !important;
-    height: 40px !important;
   }
 
   .v4-result-header {
@@ -2434,6 +2485,42 @@ input, textarea {
     padding: 0 6px !important;
     font-size: 11px !important;
     white-space: nowrap !important;
+  }
+
+  .v4-side-by-side-wrap {
+    flex-direction: column !important;
+    gap: 6px !important;
+  }
+
+  .v4-side-pane {
+    width: 100% !important;
+    height: 50% !important;
+  }
+
+  .v4-editor-toolbar {
+    padding: 0 6px !important;
+    gap: 4px !important;
+    flex-wrap: wrap !important;
+    height: auto !important;
+    min-height: 36px !important;
+  }
+
+  .v4-editor-toolbar .v4-btn {
+    height: 28px !important;
+    padding: 0 8px !important;
+    font-size: 12px !important;
+  }
+
+  .v4-editor-tabs-bar {
+    padding: 0 4px !important;
+    gap: 2px !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .v4-editor-tab {
+    padding: 0 8px !important;
+    font-size: 11px !important;
   }
 }
 

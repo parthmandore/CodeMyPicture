@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { ValidatedImage } from './types/upload';
 import { FaceDetectionResult } from './services/faceDetection/types';
 import { useFaceDetection } from './services/faceDetection';
@@ -90,20 +90,40 @@ export const AppContent: React.FC = () => {
     analytics.trackPageView(pagePath, pageTitle);
   }, [currentView]);
 
-  // Clean up object URL when app unmounts
+  // Clean up object URL strictly when the app completely unmounts
+  const currentImageRef = useRef(currentImage);
+  currentImageRef.current = currentImage;
   useEffect(() => {
     return () => {
-      if (currentImage?.objectUrl) {
-        safeRevokeObjectURL(currentImage.objectUrl);
+      if (currentImageRef.current?.objectUrl) {
+        safeRevokeObjectURL(currentImageRef.current.objectUrl);
       }
     };
-  }, [currentImage]);
+  }, []);
 
   const handleImageChange = (newImage: ValidatedImage | null) => {
-    if (currentImage?.objectUrl) {
+    if (currentImage?.objectUrl && currentImage.objectUrl !== newImage?.objectUrl) {
       safeRevokeObjectURL(currentImage.objectUrl);
     }
     setCurrentImage(newImage);
+  };
+
+  const handlePhotoUploadedInStudio = (imageUrl: string, fileName: string) => {
+    if (currentImage?.objectUrl && currentImage.objectUrl !== imageUrl) {
+      safeRevokeObjectURL(currentImage.objectUrl);
+    }
+    const file = new File([], fileName, { type: 'image/jpeg' });
+    setCurrentImage({
+      file,
+      objectUrl: imageUrl,
+      width: 600,
+      height: 800,
+      sizeBytes: 0,
+      mimeType: 'image/jpeg',
+      filename: fileName,
+      aspectRatio: 600 / 800,
+      lastModified: Date.now(),
+    });
   };
 
   const handleContinueToStudio = (
@@ -175,6 +195,7 @@ export const AppContent: React.FC = () => {
               }}
               initialImageUrl={currentImage?.objectUrl}
               initialFileName={currentImage?.file?.name}
+              onPhotoUploaded={handlePhotoUploadedInStudio}
             />
           </Suspense>
         </main>

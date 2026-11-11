@@ -15,6 +15,7 @@ import { ExportFormatsSection } from '../landing/ExportFormatsSection';
 import { DiagnosticsInfoSection } from '../landing/DiagnosticsInfoSection';
 import { ContactSection } from '../landing/ContactSection';
 import analytics from '../../services/analytics';
+import { generationManager } from '../../services/generation';
 
 export interface UploadWorkflowProps {
   currentImage: ValidatedImage | null;
@@ -74,7 +75,9 @@ export const UploadWorkflow: React.FC<UploadWorkflowProps> = ({
           safeRevokeObjectURL(currentImage.objectUrl);
         }
 
+        generationManager.cancelActiveJob('New photo uploaded in workflow');
         onImageChange(loadResult.image);
+
         analytics.trackEvent('upload_completed', {
           format: loadResult.image.mimeType.replace('image/', ''),
           width: loadResult.image.width,
@@ -100,6 +103,7 @@ export const UploadWorkflow: React.FC<UploadWorkflowProps> = ({
   );
 
   const handleRemovePhoto = useCallback(() => {
+    generationManager.cancelActiveJob('Photo removed by user');
     if (currentImage?.objectUrl) {
       safeRevokeObjectURL(currentImage.objectUrl);
     }

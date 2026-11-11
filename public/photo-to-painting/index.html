@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Photo to Painting — In-Browser Digital Portrait Art | CodeMyPicture</title>
+    <meta name="description" content="Transform photographs into painterly vector art. Features planar facial modeling, soft skin filtering, and impressionistic brushwork synthesis directly in your browser." />
+    <link rel="canonical" href="https://codemypicture.netlify.app/photo-to-painting/" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+
+    <!-- Open Graph Metadata -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://codemypicture.netlify.app/photo-to-painting/" />
+    <meta property="og:site_name" content="CodeMyPicture" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="Photo to Painting — In-Browser Digital Portrait Art | CodeMyPicture" />
+    <meta property="og:description" content="Transform photographs into painterly vector art. Features planar facial modeling, soft skin filtering, and impressionistic brushwork synthesis directly in your browser." />
+    <meta property="og:image" content="https://codemypicture.netlify.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="CodeMyPicture Photo to Painting digital portrait art preview" />
+
+    <!-- Twitter Card Metadata -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://codemypicture.netlify.app/photo-to-painting/" />
+    <meta name="twitter:title" content="Photo to Painting — In-Browser Digital Portrait Art | CodeMyPicture" />
+    <meta name="twitter:description" content="Transform photographs into painterly vector art. Features planar facial modeling, soft skin filtering, and impressionistic brushwork synthesis directly in your browser." />
+    <meta name="twitter:image" content="https://codemypicture.netlify.app/twitter-image.png" />
+
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#14110F" />
+
+    <!-- Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Structured Data: JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://codemypicture.netlify.app/#website",
+          "url": "https://codemypicture.netlify.app/",
+          "name": "CodeMyPicture"
+        },
+        {
+          "@type": "WebPage",
+          "@id": "https://codemypicture.netlify.app/photo-to-painting/#webpage",
+          "url": "https://codemypicture.netlify.app/photo-to-painting/",
+          "name": "Photo to Painting — In-Browser Digital Portrait Art",
+          "description": "Transform photographs into painterly vector art. Features planar facial modeling, soft skin filtering, and impressionistic brushwork synthesis directly in your browser.",
+          "isPartOf": {
+            "@id": "https://codemypicture.netlify.app/#website"
+          },
+          "inLanguage": "en-US"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://codemypicture.netlify.app/photo-to-painting/#breadcrumbs",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": "https://codemypicture.netlify.app/"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Photo to Painting",
+              "item": "https://codemypicture.netlify.app/photo-to-painting/"
+            }
+          ]
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://codemypicture.netlify.app/#software",
+          "name": "CodeMyPicture",
+          "applicationCategory": "DesignApplication",
+          "operatingSystem": "All (Modern Web Browser)",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://codemypicture.netlify.app/photo-to-painting/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What makes Painting mode different from a standard vector trace?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Standard vector tracing creates flat, mechanical color polygons that often look posterized and rigid. Painting mode uses algorithmic planar facial modeling to decompose the face into anatomical planes, clusters organic color masses across hair and facial contours, and synthesizes natural iris depth."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does the soft skin filter work in Painting mode?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The soft skin filter applies selective pre-trace smoothing calibrated across cheek, forehead, and chin facial landmarks. This softens camera noise and harsh digital pixelation while preserving sharp, crisp vector boundaries for the eyes, eyelashes, and lips."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Why are there no white gaps between painted vector paths?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "CodeMyPicture synthesizes a regional underlay blur layer beneath the detail brushwork. This foundation matches the dominant local color tones, ensuring that anti-aliasing seams and sub-pixel rounding errors never produce white hairline gaps."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I scale the painted artwork to large print sizes?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Even though the aesthetic resembles an oil or acrylic digital painting, the output is pure mathematical vector geometry (SVG). It can be scaled to canvas prints, posters, or architectural displays with zero loss of resolution."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I inspect and customize the SVG painting in code?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. The built-in Studio Workbench includes an interactive CodeMirror 6 code editor where you can view every SVG group (#underlay, #features, #contours), edit stroke colors, or export drop-in React JSX components."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
+    <style>
+      :root {
+        --ink: #14110F;
+        --paper: #F7F5F0;
+        --paper-dim: #D1CEC7;
+        --paper-muted: #8A8780;
+        --surface: #1E1A17;
+        --surface-hover: #26211D;
+        --line: #2C2622;
+        --vermilion: #E63B1E;
+        --vermilion-hover: #D43419;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background-color: var(--ink);
+        color: var(--paper);
+        font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      a { color: inherit; text-decoration: none; }
+      .mono { font-family: 'JetBrains Mono', monospace; }
+      .container { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+
+      .site-header {
+        border-bottom: 1px solid var(--line);
+        background-color: rgba(20, 17, 15, 0.95);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        backdrop-filter: blur(8px);
+      }
+      .header-inner {
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .wordmark {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .wordmark-accent {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-style: italic;
+        font-weight: 400;
+        color: var(--vermilion);
+        margin-left: 2px;
+      }
+      .site-nav {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        font-size: 14px;
+        color: var(--paper-dim);
+      }
+      .site-nav a:hover { color: var(--paper); }
+      .btn-cta {
+        background-color: var(--vermilion);
+        color: #fff;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 2px;
+        font-size: 13px;
+        transition: background-color 0.15s ease;
+      }
+      .btn-cta:hover { background-color: var(--vermilion-hover); }
+
+      .breadcrumb {
+        padding: 20px 0 10px;
+        font-size: 12px;
+        color: var(--paper-muted);
+      }
+      .breadcrumb a { color: var(--paper-dim); }
+      .breadcrumb a:hover { color: var(--paper); }
+
+      .page-hero {
+        padding: 40px 0 48px;
+        border-bottom: 1px solid var(--line);
+      }
+      .hero-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        color: var(--paper-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 16px;
+        background-color: var(--surface);
+        padding: 4px 10px;
+        border: 1px solid var(--line);
+        border-radius: 2px;
+      }
+      .hero-tag-dot {
+        width: 6px;
+        height: 6px;
+        background-color: var(--vermilion);
+        border-radius: 50%;
+      }
+      .hero-title {
+        font-size: clamp(32px, 5vw, 48px);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.15;
+        margin-bottom: 20px;
+      }
+      .hero-title em {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-style: italic;
+        font-weight: 400;
+        color: var(--vermilion);
+      }
+      .hero-desc {
+        font-size: 18px;
+        color: var(--paper-dim);
+        max-width: 760px;
+        margin-bottom: 28px;
+      }
+      .hero-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .btn-secondary {
+        background-color: var(--surface);
+        color: var(--paper);
+        border: 1px solid var(--line);
+        font-weight: 500;
+        padding: 10px 20px;
+        border-radius: 2px;
+        font-size: 14px;
+        transition: background-color 0.15s ease;
+      }
+      .btn-secondary:hover { background-color: var(--surface-hover); }
+
+      .content-section {
+        padding: 48px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .section-heading {
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 16px;
+      }
+      .section-intro {
+        font-size: 16px;
+        color: var(--paper-dim);
+        max-width: 800px;
+        margin-bottom: 28px;
+      }
+
+      .card-grid-2 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+      }
+      .card-grid-3 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 20px;
+      }
+      .info-card {
+        background-color: var(--surface);
+        border: 1px solid var(--line);
+        padding: 24px;
+        border-radius: 2px;
+      }
+      .info-card h3 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+      .info-card p {
+        font-size: 14px;
+        color: var(--paper-dim);
+        margin-bottom: 12px;
+      }
+      .info-card ul {
+        list-style: none;
+        padding-left: 0;
+        font-size: 13px;
+        color: var(--paper-muted);
+      }
+      .info-card ul li {
+        margin-bottom: 6px;
+        padding-left: 14px;
+        position: relative;
+      }
+      .info-card ul li::before {
+        content: "•";
+        color: var(--vermilion);
+        position: absolute;
+        left: 0;
+      }
+
+      .steps-flow {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+      .step-item {
+        background-color: var(--surface);
+        border: 1px solid var(--line);
+        padding: 20px;
+        border-radius: 2px;
+        position: relative;
+      }
+      .step-num {
+        font-size: 11px;
+        color: var(--vermilion);
+        font-weight: 700;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+      }
+      .step-item h4 {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .step-item p {
+        font-size: 13px;
+        color: var(--paper-dim);
+      }
+
+      .faq-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .faq-item {
+        background-color: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        padding: 16px 20px;
+      }
+      .faq-item summary {
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        outline: none;
+      }
+      .faq-item summary::-webkit-details-marker { color: var(--vermilion); }
+      .faq-item p {
+        margin-top: 12px;
+        font-size: 14px;
+        color: var(--paper-dim);
+      }
+
+      .cta-banner {
+        background: linear-gradient(135deg, var(--surface) 0%, rgba(230, 59, 30, 0.08) 100%);
+        border: 1px solid var(--line);
+        padding: 40px;
+        border-radius: 2px;
+        text-align: center;
+        margin: 48px 0;
+      }
+      .cta-banner h2 {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+      .cta-banner p {
+        font-size: 16px;
+        color: var(--paper-dim);
+        max-width: 600px;
+        margin: 0 auto 24px;
+      }
+
+      .site-footer {
+        padding: 40px 0;
+        border-top: 1px solid var(--line);
+        font-size: 13px;
+        color: var(--paper-muted);
+      }
+      .footer-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .footer-links {
+        display: flex;
+        gap: 16px;
+      }
+      .footer-links a:hover { color: var(--paper); }
+    </style>
+  </head>
+  <body>
+    <!-- Site Header -->
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="/" class="wordmark">CodeMy<em class="wordmark-accent">Picture</em></a>
+        <nav class="site-nav" aria-label="Main Navigation">
+          <a href="/image-to-svg/">Image to SVG</a>
+          <a href="/photo-to-vector/">Photo to Vector</a>
+          <a href="/photo-to-painting/">Photo to Painting</a>
+          <a href="/#workflow">Workflow</a>
+          <a href="/#studio" class="btn-cta">Open Studio</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- Breadcrumb Navigation -->
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Home</a> &rsaquo; <span>Photo to Painting Converter</span>
+      </nav>
+
+      <!-- Hero Section -->
+      <section class="page-hero">
+        <div class="hero-tag mono">
+          <span class="hero-tag-dot"></span>
+          <span>Artistic Portrait Synthesis</span>
+        </div>
+        <h1 class="hero-title">
+          Turn photographs into <em class="serif">painterly digital artwork</em>.
+        </h1>
+        <p class="hero-desc">
+          CodeMyPicture's Painting engine transforms portraits into expressive, impressionistic vector paintings. Experience planar facial modeling, directional brushwork, and soft skin filtering without uploading your photos to cloud servers.
+        </p>
+        <div class="hero-actions">
+          <a href="/#studio" class="btn-cta">Paint a Portrait Now</a>
+          <a href="#how-painting-works" class="btn-secondary">How Painting Works</a>
+        </div>
+      </section>
+
+      <!-- Section: The Painting Engine Architecture -->
+      <section id="how-painting-works" class="content-section">
+        <h2 class="section-heading">How the Painting Engine Works</h2>
+        <p class="section-intro">
+          Unlike simple photo filter apps that slap a brush texture over pixels, CodeMyPicture algorithmically constructs a genuine digital painting from the ground up:
+        </p>
+        <div class="steps-flow">
+          <div class="step-item">
+            <div class="step-num mono">Stage 01</div>
+            <h4>Planar Decomposition</h4>
+            <p>478-point facial mesh mapping analyzes anatomical light and shadow planes across the forehead, cheeks, nose, and chin.</p>
+          </div>
+          <div class="step-item">
+            <div class="step-num mono">Stage 02</div>
+            <h4>Soft Skin Filtering</h4>
+            <p>Selective regional smoothing reduces sensor noise across cheek, forehead, and jaw landmarks while keeping feature boundaries intact.</p>
+          </div>
+          <div class="step-item">
+            <div class="step-num mono">Stage 03</div>
+            <h4>Layered Brushwork</h4>
+            <p>Empirical palette clustering synthesizes cohesive planar masses across hair, eyes, and skin tones with authentic portrait depth.</p>
+          </div>
+          <div class="step-item">
+            <div class="step-num mono">Stage 04</div>
+            <h4>Underlay Fusion</h4>
+            <p>A regional underlay blur foundation eliminates white vector seams, producing an organic digital oil/acrylic painting.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Visual Aesthetics & Technical Features -->
+      <section class="content-section">
+        <h2 class="section-heading">Key Artistic Features of Painting Mode</h2>
+        <p class="section-intro">
+          Designed specifically for expressive portraiture, Painting mode incorporates multiple specialized rendering passes:
+        </p>
+        <div class="card-grid-3">
+          <div class="info-card">
+            <h3>Soft Skin Filtering</h3>
+            <p>Calibrated Gaussian and bilateral filtering harmonizes skin tones across facial planes, giving skin a smooth, painted texture while retaining natural bone structure.</p>
+          </div>
+          <div class="info-card">
+            <h3>Expressive Eye & Contour Modeling</h3>
+            <p>Targeted iris color clusters and high-resolution contour tracking preserve natural catchlights and gaze depth without artificial stamps.</p>
+          </div>
+          <div class="info-card">
+            <h3>Zero Seam Artifacts</h3>
+            <p>A regional underlay base layer matches local background color values, ensuring that adjacent vector shapes never bleed background white on sub-pixel rendering.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Painting vs Exact Copy -->
+      <section class="content-section">
+        <h2 class="section-heading">Painting Mode vs. Exact Copy Mode</h2>
+        <p class="section-intro">
+          Choosing between Painting and Exact Copy depends entirely on your creative goal:
+        </p>
+        <div class="card-grid-2">
+          <div class="info-card">
+            <h3>Painting Mode (Artistic Interpretation)</h3>
+            <p>Prioritizes emotional aesthetic, painterly brushwork, and portrait harmony over rigid pixel accuracy.</p>
+            <ul>
+              <li>Soft skin filtering and planar anatomical modeling</li>
+              <li>Directional hair brushwork and limbal eye gradients</li>
+              <li>Stylized oil/acrylic digital painting aesthetic</li>
+              <li>Best for gifts, social avatars, and wall art</li>
+            </ul>
+          </div>
+          <div class="info-card">
+            <h3>Exact Copy Mode (Faithful Vector Tracing)</h3>
+            <p>Prioritizes geometric fidelity, tight color quantization, and crisp posterized contour tracking.</p>
+            <ul>
+              <li>High-resolution edge detection with minimal smoothing</li>
+              <li>Preserves exact photographic specular highlights</li>
+              <li>Graphic posterized vector look</li>
+              <li>Best for logos, technical diagrams, and crisp graphic avatars</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Practical Creative Applications -->
+      <section class="content-section">
+        <h2 class="section-heading">Practical Creative Applications</h2>
+        <p class="section-intro">
+          Turn your personal photo collection into distinctive digital artwork:
+        </p>
+        <div class="card-grid-3">
+          <div class="info-card">
+            <h3>Artistic Avatars & Profiles</h3>
+            <p>Stand out across social media, GitHub, and professional portfolios with an impressionistic painted portrait.</p>
+          </div>
+          <div class="info-card">
+            <h3>Print & Canvas Gifts</h3>
+            <p>Because the result is pure vector geometry, it can be blown up to full canvas print size with zero pixelation or fuzziness.</p>
+          </div>
+          <div class="info-card">
+            <h3>Editorial & Blog Artwork</h3>
+            <p>Create cohesive, stylized editorial illustrations for articles, newsletter headers, and podcast cover art.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: FAQs -->
+      <section class="content-section">
+        <h2 class="section-heading">Frequently Asked Questions</h2>
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary>What makes Painting mode different from a standard vector trace?</summary>
+            <p>Standard vector tracing creates flat, mechanical color polygons that often look posterized and rigid. Painting mode uses algorithmic planar facial modeling to decompose the face into anatomical planes, clusters organic color masses across hair and facial contours, and synthesizes natural iris depth.</p>
+          </details>
+          <details class="faq-item">
+            <summary>How does the soft skin filter work in Painting mode?</summary>
+            <p>The soft skin filter applies selective pre-trace smoothing calibrated across cheek, forehead, and chin facial landmarks. This softens camera noise and harsh digital pixelation while preserving sharp, crisp vector boundaries for the eyes, eyelashes, and lips.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Why are there no white gaps between painted vector paths?</summary>
+            <p>CodeMyPicture synthesizes a regional underlay blur layer beneath the detail brushwork. This foundation matches the dominant local color tones, ensuring that anti-aliasing seams and sub-pixel rounding errors never produce white hairline gaps.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Can I scale the painted artwork to large print sizes?</summary>
+            <p>Yes. Even though the aesthetic resembles an oil or acrylic digital painting, the output is pure mathematical vector geometry (SVG). It can be scaled to canvas prints, posters, or architectural displays with zero loss of resolution.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Can I inspect and customize the SVG painting in code?</summary>
+            <p>Yes. The built-in Studio Workbench includes an interactive CodeMirror 6 code editor where you can view every SVG group (#underlay, #features, #contours), edit stroke colors, or export drop-in React JSX components.</p>
+          </details>
+        </div>
+      </section>
+
+      <!-- CTA Banner -->
+      <section class="cta-banner">
+        <h2>Transform Your Photo into a Digital Painting</h2>
+        <p>100% private, free, and in-browser. Experience impressionistic portrait synthesis right now.</p>
+        <a href="/#studio" class="btn-cta">Paint Your Portrait in Studio</a>
+      </section>
+    </main>
+
+    <!-- Site Footer -->
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div>&copy; 2026 CodeMyPicture. In-Browser Vector Reconstruction Studio.</div>
+        <div class="footer-links">
+          <a href="/">Home</a>
+          <a href="/image-to-svg/">Image to SVG</a>
+          <a href="/photo-to-vector/">Photo to Vector</a>
+          <a href="/photo-to-painting/">Photo to Painting</a>
+          <a href="/#privacy">Privacy Architecture</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

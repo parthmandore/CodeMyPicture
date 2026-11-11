@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Photo to Vector Converter — Transform Portraits to SVG Code | CodeMyPicture</title>
+    <meta name="description" content="Transform portrait photographs into genuine vector code. Uses MediaPipe facial mesh and multi-scale curve synthesis to create scalable SVG portraits entirely in your browser." />
+    <link rel="canonical" href="https://codemypicture.netlify.app/photo-to-vector/" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+
+    <!-- Open Graph Metadata -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://codemypicture.netlify.app/photo-to-vector/" />
+    <meta property="og:site_name" content="CodeMyPicture" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="Photo to Vector Converter — Transform Portraits to SVG Code | CodeMyPicture" />
+    <meta property="og:description" content="Transform portrait photographs into genuine vector code. Uses MediaPipe facial mesh and multi-scale curve synthesis to create scalable SVG portraits entirely in your browser." />
+    <meta property="og:image" content="https://codemypicture.netlify.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="CodeMyPicture Photo to Vector Converter preview" />
+
+    <!-- Twitter Card Metadata -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://codemypicture.netlify.app/photo-to-vector/" />
+    <meta name="twitter:title" content="Photo to Vector Converter — Transform Portraits to SVG Code | CodeMyPicture" />
+    <meta name="twitter:description" content="Transform portrait photographs into genuine vector code. Uses MediaPipe facial mesh and multi-scale curve synthesis to create scalable SVG portraits entirely in your browser." />
+    <meta name="twitter:image" content="https://codemypicture.netlify.app/twitter-image.png" />
+
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#14110F" />
+
+    <!-- Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Structured Data: JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://codemypicture.netlify.app/#website",
+          "url": "https://codemypicture.netlify.app/",
+          "name": "CodeMyPicture"
+        },
+        {
+          "@type": "WebPage",
+          "@id": "https://codemypicture.netlify.app/photo-to-vector/#webpage",
+          "url": "https://codemypicture.netlify.app/photo-to-vector/",
+          "name": "Photo to Vector Converter — Transform Portraits to SVG Code",
+          "description": "Transform portrait photographs into genuine vector code. Uses MediaPipe facial mesh and multi-scale curve synthesis to create scalable SVG portraits entirely in your browser.",
+          "isPartOf": {
+            "@id": "https://codemypicture.netlify.app/#website"
+          },
+          "inLanguage": "en-US"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://codemypicture.netlify.app/photo-to-vector/#breadcrumbs",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": "https://codemypicture.netlify.app/"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Photo to Vector",
+              "item": "https://codemypicture.netlify.app/photo-to-vector/"
+            }
+          ]
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://codemypicture.netlify.app/#software",
+          "name": "CodeMyPicture",
+          "applicationCategory": "DesignApplication",
+          "operatingSystem": "All (Modern Web Browser)",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://codemypicture.netlify.app/photo-to-vector/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "How does CodeMyPicture preserve facial likeness in vector format?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "CodeMyPicture runs MediaPipe's 478-point 3D face mesh directly in your browser. This biometric coordinate map anchors the vector synthesis around key facial features—including the eyes, pupils, eyebrows, nose bridge, and lip contours—ensuring identity is maintained even when complex skin tones are simplified into vector planes."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does vector reconstruction differ from a raster image filter?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Raster photo filters (such as posterize or cartoon filters) simply modify color values on a fixed pixel grid. Vector reconstruction completely replaces the pixel grid with mathematical XML coordinate paths (SVG), creating an entirely new vector graphic that can be scaled infinitely, animated, or plotted physically."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I use these vector portraits for laser cutting or vinyl plotters?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, with appropriate preparation. Because CodeMyPicture outputs layered SVG vector paths, exported files can be imported into vector design tools and CAM software (such as Illustrator, Inkscape, or LightBurn) for laser engraving and screen printing. For physical vinyl knife cutting or pen plotting, compound filled paths should be converted to single-line stroke outlines using your vector editor."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How do the High, Medium, and Low quality tiers differ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The quality tiers adjust the path omission threshold and color quantization depth. Low Quality produces a minimalist vector portrait with 15-40 paths for minimal file size. Medium Quality balances path count and detail, while High Quality creates intricate multi-layered vector geometry capturing subtle skin tonal shifts."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Are my facial features or photos stored anywhere?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Never. All facial mesh landmark detection and vector curve synthesis execute locally in your browser's RAM via WebAssembly. Neither the photo nor the biometric landmark data is ever transmitted over the network."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
+    <style>
+      :root {
+        --ink: #14110F;
+        --paper: #F7F5F0;
+        --paper-dim: #D1CEC7;
+        --paper-muted: #8A8780;
+        --surface: #1E1A17;
+        --surface-hover: #26211D;
+        --line: #2C2622;
+        --vermilion: #E63B1E;
+        --vermilion-hover: #D43419;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background-color: var(--ink);
+        color: var(--paper);
+        font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      a { color: inherit; text-decoration: none; }
+      .mono { font-family: 'JetBrains Mono', monospace; }
+      .container { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+
+      .site-header {
+        border-bottom: 1px solid var(--line);
+        background-color: rgba(20, 17, 15, 0.95);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        backdrop-filter: blur(8px);
+      }
+      .header-inner {
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .wordmark {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .wordmark-accent {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-style: italic;
+        font-weight: 400;
+        color: var(--vermilion);
+        margin-left: 2px;
+      }
+      .site-nav {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        font-size: 14px;
+        color: var(--paper-dim);
+      }
+      .site-nav a:hover { color: var(--paper); }
+      .btn-cta {
+        background-color: var(--vermilion);
+        color: #fff;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 2px;
+        font-size: 13px;
+        transition: background-color 0.15s ease;
+      }
+      .btn-cta:hover { background-color: var(--vermilion-hover); }
+
+      .breadcrumb {
+        padding: 20px 0 10px;
+        font-size: 12px;
+        color: var(--paper-muted);
+      }
+      .breadcrumb a { color: var(--paper-dim); }
+      .breadcrumb a:hover { color: var(--paper); }
+
+      .page-hero {
+        padding: 40px 0 48px;
+        border-bottom: 1px solid var(--line);
+      }
+      .hero-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        color: var(--paper-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 16px;
+        background-color: var(--surface);
+        padding: 4px 10px;
+        border: 1px solid var(--line);
+        border-radius: 2px;
+      }
+      .hero-tag-dot {
+        width: 6px;
+        height: 6px;
+        background-color: var(--vermilion);
+        border-radius: 50%;
+      }
+      .hero-title {
+        font-size: clamp(32px, 5vw, 48px);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.15;
+        margin-bottom: 20px;
+      }
+      .hero-title em {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-weight: 400;
+        font-style: italic;
+        color: var(--vermilion);
+      }
+      .hero-desc {
+        font-size: 18px;
+        color: var(--paper-dim);
+        max-width: 760px;
+        margin-bottom: 28px;
+      }
+      .hero-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .btn-secondary {
+        background-color: var(--surface);
+        color: var(--paper);
+        border: 1px solid var(--line);
+        font-weight: 500;
+        padding: 10px 20px;
+        border-radius: 2px;
+        font-size: 14px;
+        transition: background-color 0.15s ease;
+      }
+      .btn-secondary:hover { background-color: var(--surface-hover); }
+
+      .content-section {
+        padding: 48px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .section-heading {
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 16px;
+      }
+      .section-intro {
+        font-size: 16px;
+        color: var(--paper-dim);
+        max-width: 800px;
+        margin-bottom: 28px;
+      }
+
+      .card-grid-2 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+      }
+      .card-grid-3 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 20px;
+      }
+      .info-card {
+        background-color: var(--surface);
+        border: 1px solid var(--line);
+        padding: 24px;
+        border-radius: 2px;
+      }
+      .info-card h3 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+      .info-card p {
+        font-size: 14px;
+        color: var(--paper-dim);
+        margin-bottom: 12px;
+      }
+      .info-card ul {
+        list-style: none;
+        padding-left: 0;
+        font-size: 13px;
+        color: var(--paper-muted);
+      }
+      .info-card ul li {
+        margin-bottom: 6px;
+        padding-left: 14px;
+        position: relative;
+      }
+      .info-card ul li::before {
+        content: "•";
+        color: var(--vermilion);
+        position: absolute;
+        left: 0;
+      }
+
+      .steps-flow {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+      .step-item {
+        background-color: var(--surface);
+        border: 1px solid var(--line);
+        padding: 20px;
+        border-radius: 2px;
+        position: relative;
+      }
+      .step-num {
+        font-size: 11px;
+        color: var(--vermilion);
+        font-weight: 700;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+      }
+      .step-item h4 {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .step-item p {
+        font-size: 13px;
+        color: var(--paper-dim);
+      }
+
+      .faq-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .faq-item {
+        background-color: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        padding: 16px 20px;
+      }
+      .faq-item summary {
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        outline: none;
+      }
+      .faq-item summary::-webkit-details-marker { color: var(--vermilion); }
+      .faq-item p {
+        margin-top: 12px;
+        font-size: 14px;
+        color: var(--paper-dim);
+      }
+
+      .cta-banner {
+        background: linear-gradient(135deg, var(--surface) 0%, rgba(230, 59, 30, 0.08) 100%);
+        border: 1px solid var(--line);
+        padding: 40px;
+        border-radius: 2px;
+        text-align: center;
+        margin: 48px 0;
+      }
+      .cta-banner h2 {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+      .cta-banner p {
+        font-size: 16px;
+        color: var(--paper-dim);
+        max-width: 600px;
+        margin: 0 auto 24px;
+      }
+
+      .site-footer {
+        padding: 40px 0;
+        border-top: 1px solid var(--line);
+        font-size: 13px;
+        color: var(--paper-muted);
+      }
+      .footer-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .footer-links {
+        display: flex;
+        gap: 16px;
+      }
+      .footer-links a:hover { color: var(--paper); }
+    </style>
+  </head>
+  <body>
+    <!-- Site Header -->
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="/" class="wordmark">CodeMy<em class="wordmark-accent">Picture</em></a>
+        <nav class="site-nav" aria-label="Main Navigation">
+          <a href="/image-to-svg/">Image to SVG</a>
+          <a href="/photo-to-vector/">Photo to Vector</a>
+          <a href="/photo-to-painting/">Photo to Painting</a>
+          <a href="/#workflow">Workflow</a>
+          <a href="/#studio" class="btn-cta">Open Studio</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- Breadcrumb Navigation -->
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Home</a> &rsaquo; <span>Photo to Vector Converter</span>
+      </nav>
+
+      <!-- Hero Section -->
+      <section class="page-hero">
+        <div class="hero-tag mono">
+          <span class="hero-tag-dot"></span>
+          <span>Portrait Vectorization</span>
+        </div>
+        <h1 class="hero-title">
+          Transform portrait photographs into <em class="serif">vector artwork</em>.
+        </h1>
+        <p class="hero-desc">
+          Move beyond simple pixel filters. CodeMyPicture maps facial topology and fits mathematical Bezier curves directly to your photograph, outputting genuine SVG vector code in local device memory.
+        </p>
+        <div class="hero-actions">
+          <a href="/#studio" class="btn-cta">Vectorize a Photo Now</a>
+          <a href="#biometrics" class="btn-secondary">How Topology Works</a>
+        </div>
+      </section>
+
+      <!-- Section: Vector Reconstruction vs Image Filters -->
+      <section class="content-section">
+        <h2 class="section-heading">Vector Reconstruction vs. Conventional Image Filters</h2>
+        <p class="section-intro">
+          Many tools claim to "vectorize" portraits by simply applying high-contrast raster filters (such as posterization or thresholding) to an HTML5 canvas. Here is how genuine vector reconstruction differs:
+        </p>
+        <div class="card-grid-2">
+          <div class="info-card">
+            <h3>Conventional Raster Filters</h3>
+            <p>Alter pixel color channels on a fixed bitmap grid. The underlying structure remains a rigid grid of pixels.</p>
+            <ul>
+              <li>Fixed pixel dimensions; loses quality when scaled</li>
+              <li>Cannot extract independent geometric paths</li>
+              <li>Heavy JPEG/PNG file size requirements for high resolution</li>
+              <li>Zero programmatic styling or DOM manipulation</li>
+            </ul>
+          </div>
+          <div class="info-card">
+            <h3>CodeMyPicture Vector Synthesis</h3>
+            <p>Converts the photograph into mathematical XML geometry (SVG) composed of nodes, control points, and grouped layers.</p>
+            <ul>
+              <li>Infinitely scalable with razor-sharp contours</li>
+              <li>Discrete SVG paths with unique IDs and classes</li>
+              <li>Embeddable directly as a React JSX component</li>
+              <li>Zero server uploads; 100% computed in browser RAM</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Biometric Landmark Anchoring -->
+      <section id="biometrics" class="content-section">
+        <h2 class="section-heading">How Facial Topology Preserves Likeness</h2>
+        <p class="section-intro">
+          A common failure mode of automated vector tracing is that delicate facial features—such as eyelids, pupils, and lips—get distorted or merged into nearby skin folds. CodeMyPicture solves this using a two-stage computer vision pipeline:
+        </p>
+        <div class="steps-flow">
+          <div class="step-item">
+            <div class="step-num mono">Stage 01</div>
+            <h4>478 Face Mesh</h4>
+            <p>MediaPipe runs locally in WebAssembly to identify 478 3D landmark points across the forehead, eyes, nose, and jawline.</p>
+          </div>
+          <div class="step-item">
+            <div class="step-num mono">Stage 02</div>
+            <h4>Regional Saliency</h4>
+            <p>Critical identity regions (iris, pupils, lips, eyebrows) are isolated from general skin and hair zones.</p>
+          </div>
+          <div class="step-item">
+            <div class="step-num mono">Stage 03</div>
+            <h4>Planar Modeling</h4>
+            <p>Skin tones are quantized into cohesive planar color regions without obscuring facial bone structure.</p>
+          </div>
+          <div class="step-item">
+            <div class="step-num mono">Stage 04</div>
+            <h4>Layered Vector Assembly</h4>
+            <p>The vector paths are assembled with underlay blurs to prevent white seams, producing a cohesive vector portrait.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Choosing Your Vector Aesthetic -->
+      <section class="content-section">
+        <h2 class="section-heading">Choosing Your Vector Style: Exact Copy vs. Painting</h2>
+        <p class="section-intro">
+          CodeMyPicture provides two specialized engines tailored for different vector aesthetics:
+        </p>
+        <div class="card-grid-2">
+          <div class="info-card">
+            <h3>Exact Copy: High-Fidelity Contour Tracking</h3>
+            <p>Best for graphic illustrations, logos, and crisp posterized artwork. It clusters photographic colors into a quantized palette (up to 64 colors) and fits tight cubic Bezier curves to tonal contours.</p>
+            <ul>
+              <li>Crisp graphic edges without artistic stylization</li>
+              <li>Preserves original photograph lighting and specular highlights</li>
+              <li>Available in High, Medium, and Low vector path tiers</li>
+            </ul>
+          </div>
+          <div class="info-card">
+            <h3>Painting Mode: Expressive Digital Brushwork</h3>
+            <p>Best for artistic portraits and gifts. It builds an impressionistic digital painting using layered planar brushwork, directional contours, limbal eye tones, and soft skin tone harmonization.</p>
+            <ul>
+              <li>Soft skin pre-filtering across cheek and forehead landmark zones</li>
+              <li>Multi-scale planar vector brushwork with organic contour flow</li>
+              <li>Seamless vector underlay foundation eliminating white gaps</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Real-World Applications -->
+      <section class="content-section">
+        <h2 class="section-heading">Applications for Vector Photography</h2>
+        <p class="section-intro">
+          Clean vector code unlocks workflows that bitmap photographs simply cannot support:
+        </p>
+        <div class="card-grid-3">
+          <div class="info-card">
+            <h3>Engineering & Dev Avatars</h3>
+            <p>Give your documentation, GitHub profile, or SaaS team directory a modern, artistic vector identity that renders razor-sharp on Retina screens.</p>
+          </div>
+          <div class="info-card">
+            <h3>Fabrication & Plotting</h3>
+            <p>Because the output consists of genuine coordinate paths, SVGs can be imported into design and CAM tools for laser engraving and screen printing, or converted to outline strokes for pen plotting and vinyl cutting.</p>
+          </div>
+          <div class="info-card">
+            <h3>Design Systems & Branding</h3>
+            <p>Incorporate employee portraits and user imagery directly into Figma and web design systems as editable vector components.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: FAQs -->
+      <section class="content-section">
+        <h2 class="section-heading">Frequently Asked Questions</h2>
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary>How does CodeMyPicture preserve facial likeness in vector format?</summary>
+            <p>CodeMyPicture runs MediaPipe's 478-point 3D face mesh directly in your browser. This biometric coordinate map anchors the vector synthesis around key facial features—including the eyes, pupils, eyebrows, nose bridge, and lip contours—ensuring identity is maintained even when complex skin tones are simplified into vector planes.</p>
+          </details>
+          <details class="faq-item">
+            <summary>How does vector reconstruction differ from a raster image filter?</summary>
+            <p>Raster photo filters (such as posterize or cartoon filters) simply modify color values on a fixed pixel grid. Vector reconstruction completely replaces the pixel grid with mathematical XML coordinate paths (SVG), creating an entirely new vector graphic that can be scaled infinitely, animated, or plotted physically.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Can I use these vector portraits for laser cutting or vinyl plotters?</summary>
+            <p>Yes, with appropriate preparation. Because CodeMyPicture outputs layered SVG vector paths, exported files can be imported into vector design tools and CAM software (such as Illustrator, Inkscape, or LightBurn) for laser engraving and screen printing. For physical vinyl knife cutting or pen plotting, compound filled paths should be converted to single-line stroke outlines using your vector editor.</p>
+          </details>
+          <details class="faq-item">
+            <summary>How do the High, Medium, and Low quality tiers differ?</summary>
+            <p>The quality tiers adjust the path omission threshold and color quantization depth. Low Quality produces a minimalist vector portrait with 15-40 paths for minimal file size. Medium Quality balances path count and detail, while High Quality creates intricate multi-layered vector geometry capturing subtle skin tonal shifts.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Are my facial features or photos stored anywhere?</summary>
+            <p>Never. All facial mesh landmark detection and vector curve synthesis execute locally in your browser's RAM via WebAssembly. Neither the photo nor the biometric landmark data is ever transmitted over the network.</p>
+          </details>
+        </div>
+      </section>
+
+      <!-- CTA Banner -->
+      <section class="cta-banner">
+        <h2>Reconstruct Your Photo as Vector Artwork Now</h2>
+        <p>100% private, free, and in-browser. No sign-up or cloud upload required.</p>
+        <a href="/#studio" class="btn-cta">Open CodeMyPicture Studio</a>
+      </section>
+    </main>
+
+    <!-- Site Footer -->
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div>&copy; 2026 CodeMyPicture. In-Browser Vector Reconstruction Studio.</div>
+        <div class="footer-links">
+          <a href="/">Home</a>
+          <a href="/image-to-svg/">Image to SVG</a>
+          <a href="/photo-to-vector/">Photo to Vector</a>
+          <a href="/photo-to-painting/">Photo to Painting</a>
+          <a href="/#privacy">Privacy Architecture</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

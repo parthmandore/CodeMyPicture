@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image to SVG Converter — Free In-Browser Vectorization | CodeMyPicture</title>
+    <meta name="description" content="Convert raster images and photographs into clean, scalable SVG vector artwork directly in your browser. 100% client-side WebAssembly processing with zero cloud uploads." />
+    <link rel="canonical" href="https://codemypicture.netlify.app/image-to-svg/" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+
+    <!-- Open Graph Metadata -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://codemypicture.netlify.app/image-to-svg/" />
+    <meta property="og:site_name" content="CodeMyPicture" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="Image to SVG Converter — Free In-Browser Vectorization | CodeMyPicture" />
+    <meta property="og:description" content="Convert raster images and photographs into clean, scalable SVG vector artwork directly in your browser. 100% client-side WebAssembly processing with zero cloud uploads." />
+    <meta property="og:image" content="https://codemypicture.netlify.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="CodeMyPicture Image to SVG Converter interface preview" />
+
+    <!-- Twitter Card Metadata -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://codemypicture.netlify.app/image-to-svg/" />
+    <meta name="twitter:title" content="Image to SVG Converter — Free In-Browser Vectorization | CodeMyPicture" />
+    <meta name="twitter:description" content="Convert raster images and photographs into clean, scalable SVG vector artwork directly in your browser. 100% client-side WebAssembly processing with zero cloud uploads." />
+    <meta name="twitter:image" content="https://codemypicture.netlify.app/twitter-image.png" />
+
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#14110F" />
+
+    <!-- Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Structured Data: JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://codemypicture.netlify.app/#website",
+          "url": "https://codemypicture.netlify.app/",
+          "name": "CodeMyPicture"
+        },
+        {
+          "@type": "WebPage",
+          "@id": "https://codemypicture.netlify.app/image-to-svg/#webpage",
+          "url": "https://codemypicture.netlify.app/image-to-svg/",
+          "name": "Image to SVG Converter — Free In-Browser Vectorization",
+          "description": "Convert raster images and photographs into clean, scalable SVG vector artwork directly in your browser. 100% client-side WebAssembly processing with zero cloud uploads.",
+          "isPartOf": {
+            "@id": "https://codemypicture.netlify.app/#website"
+          },
+          "inLanguage": "en-US"
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://codemypicture.netlify.app/image-to-svg/#breadcrumbs",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": "https://codemypicture.netlify.app/"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Image to SVG",
+              "item": "https://codemypicture.netlify.app/image-to-svg/"
+            }
+          ]
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://codemypicture.netlify.app/#software",
+          "name": "CodeMyPicture",
+          "applicationCategory": "DesignApplication",
+          "operatingSystem": "All (Modern Web Browser)",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://codemypicture.netlify.app/image-to-svg/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What happens to my image during SVG conversion?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Your image is decoded and vectorized entirely inside your browser's local sandbox using WebAssembly and Web Workers. The image file is never uploaded to any remote server or stored in any cloud database."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Will the resulting SVG look identical to my original photo?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Vectorization transforms raster pixel grids into mathematical Bezier paths and clustered color regions. The Exact Copy mode produces a faithful graphic contour tracing, while Painting mode creates an expressive planar artistic interpretation. Because complex photographic gradients are grouped into discrete color palettes (up to 64 colors), the output is a stylized vector artwork rather than a raw bitmap copy."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I open and edit the SVG in Illustrator or Figma?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. CodeMyPicture exports standards-compliant SVG files with clean viewBox coordinates and path groupings that can be opened, ungrouped, and styled in Adobe Illustrator, Figma, Inkscape, or any vector design tool."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How large is the exported SVG file?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "File size depends on the selected quality tier and image complexity. Low Quality typically produces 15 to 40 paths (approx. 5KB to 25KB gzipped), Medium Quality balances detail and size, and High Quality captures intricate contours (often 100KB to 1MB gzipped)."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I embed the vector output directly into React or HTML?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Beyond raw SVG download, CodeMyPicture provides a production-ready React JSX component (Portrait.jsx) and a standalone embeddable HTML snippet with a responsive aspect-ratio container."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
+    <style>
+      :root {
+        --ink: #14110F;
+        --paper: #F7F5F0;
+        --paper-dim: #D1CEC7;
+        --paper-muted: #8A8780;
+        --surface: #1E1A17;
+        --surface-hover: #26211D;
+        --line: #2C2622;
+        --vermilion: #E63B1E;
+        --vermilion-hover: #D43419;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        background-color: var(--ink);
+        color: var(--paper);
+        font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      a { color: inherit; text-decoration: none; }
+      .mono { font-family: 'JetBrains Mono', monospace; }
+      .container { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+
+      /* Header */
+      .site-header {
+        border-bottom: 1px solid var(--line);
+        background-color: rgba(20, 17, 15, 0.95);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        backdrop-filter: blur(8px);
+      }
+      .header-inner {
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .wordmark {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .wordmark-accent {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-style: italic;
+        font-weight: 400;
+        color: var(--vermilion);
+        margin-left: 2px;
+      }
+      .site-nav {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        font-size: 14px;
+        color: var(--paper-dim);
+      }
+      .site-nav a:hover { color: var(--paper); }
+      .btn-cta {
+        background-color: var(--vermilion);
+        color: #fff;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 2px;
+        font-size: 13px;
+        transition: background-color 0.15s ease;
+      }
+      .btn-cta:hover { background-color: var(--vermilion-hover); }
+
+      /* Breadcrumb */
+      .breadcrumb {
+        padding: 20px 0 10px;
+        font-size: 12px;
+        color: var(--paper-muted);
+      }
+      .breadcrumb a { color: var(--paper-dim); }
+      .breadcrumb a:hover { color: var(--paper); }
+
+      /* Hero */
+      .page-hero {
+        padding: 40px 0 48px;
+        border-bottom: 1px solid var(--line);
+      }
+      .hero-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        color: var(--paper-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 16px;
+        background-color: var(--surface);
+        padding: 4px 10px;
+        border: 1px solid var(--line);
+        border-radius: 2px;
+      }
+      .hero-tag-dot {
+        width: 6px;
+        height: 6px;
+        background-color: var(--vermilion);
+        border-radius: 50%;
+      }
+      .hero-title {
+        font-size: clamp(32px, 5vw, 48px);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.15;
+        margin-bottom: 20px;
+      }
+      .hero-title em {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-weight: 400;
+        font-style: italic;
+        color: var(--vermilion);
+      }
+      .hero-desc {
+        font-size: 18px;
+        color: var(--paper-dim);
+        max-width: 760px;
+        margin-bottom: 28px;
+      }
+      .hero-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .btn-secondary {
+        background-color: var(--surface);
+        color: var(--paper);
+        border: 1px solid var(--line);
+        font-weight: 500;
+        padding: 10px 20px;
+        border-radius: 2px;
+        font-size: 14px;
+        transition: background-color 0.15s ease;
+      }
+      .btn-secondary:hover { background-color: var(--surface-hover); }
+
+      /* Sections */
+      .content-section {
+        padding: 48px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .section-heading {
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 16px;
+      }
+      .section-intro {
+        font-size: 16px;
+        color: var(--paper-dim);
+        max-width: 800px;
+        margin-bottom: 28px;
+      }
+
+      /* Grid & Cards */
+      .card-grid-2 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+      }
+      .card-grid-3 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 20px;
+      }
+      .info-card {
+        background-color: var(--surface);
+        border: 1px solid var(--line);
+        padding: 24px;
+        border-radius: 2px;
+      }
+      .info-card h3 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+      .info-card p {
+        font-size: 14px;
+        color: var(--paper-dim);
+        margin-bottom: 12px;
+      }
+      .info-card ul {
+        list-style: none;
+        padding-left: 0;
+        font-size: 13px;
+        color: var(--paper-muted);
+      }
+      .info-card ul li {
+        margin-bottom: 6px;
+        padding-left: 14px;
+        position: relative;
+      }
+      .info-card ul li::before {
+        content: "•";
+        color: var(--vermilion);
+        position: absolute;
+        left: 0;
+      }
+
+      /* Workflow Steps */
+      .steps-flow {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+      .step-item {
+        background-color: var(--surface);
+        border: 1px solid var(--line);
+        padding: 20px;
+        border-radius: 2px;
+        position: relative;
+      }
+      .step-num {
+        font-size: 11px;
+        color: var(--vermilion);
+        font-weight: 700;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+      }
+      .step-item h4 {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .step-item p {
+        font-size: 13px;
+        color: var(--paper-dim);
+      }
+
+      /* Code Callout */
+      .code-preview-block {
+        background-color: #0c0a09;
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        padding: 20px;
+        font-size: 13px;
+        overflow-x: auto;
+        color: #A3E635;
+        margin-top: 16px;
+      }
+
+      /* FAQ Accordion */
+      .faq-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .faq-item {
+        background-color: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        padding: 16px 20px;
+      }
+      .faq-item summary {
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        outline: none;
+      }
+      .faq-item summary::-webkit-details-marker { color: var(--vermilion); }
+      .faq-item p {
+        margin-top: 12px;
+        font-size: 14px;
+        color: var(--paper-dim);
+      }
+
+      /* CTA Banner */
+      .cta-banner {
+        background: linear-gradient(135deg, var(--surface) 0%, rgba(230, 59, 30, 0.08) 100%);
+        border: 1px solid var(--line);
+        padding: 40px;
+        border-radius: 2px;
+        text-align: center;
+        margin: 48px 0;
+      }
+      .cta-banner h2 {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+      .cta-banner p {
+        font-size: 16px;
+        color: var(--paper-dim);
+        max-width: 600px;
+        margin: 0 auto 24px;
+      }
+
+      /* Footer */
+      .site-footer {
+        padding: 40px 0;
+        border-top: 1px solid var(--line);
+        font-size: 13px;
+        color: var(--paper-muted);
+      }
+      .footer-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .footer-links {
+        display: flex;
+        gap: 16px;
+      }
+      .footer-links a:hover { color: var(--paper); }
+    </style>
+  </head>
+  <body>
+    <!-- Site Header -->
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="/" class="wordmark">CodeMy<em class="wordmark-accent">Picture</em></a>
+        <nav class="site-nav" aria-label="Main Navigation">
+          <a href="/image-to-svg/">Image to SVG</a>
+          <a href="/photo-to-vector/">Photo to Vector</a>
+          <a href="/photo-to-painting/">Photo to Painting</a>
+          <a href="/#workflow">Workflow</a>
+          <a href="/#studio" class="btn-cta">Open Studio</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- Breadcrumb Navigation -->
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Home</a> &rsaquo; <span>Image to SVG Converter</span>
+      </nav>
+
+      <!-- Hero Section -->
+      <section class="page-hero">
+        <div class="hero-tag mono">
+          <span class="hero-tag-dot"></span>
+          <span>Vector Conversion Utility</span>
+        </div>
+        <h1 class="hero-title">
+          Convert raster images to <em class="serif">scalable SVG artwork</em>.
+        </h1>
+        <p class="hero-desc">
+          CodeMyPicture transforms standard raster photographs (JPEG, PNG, WebP) into lightweight, standards-compliant SVG vector code directly in your browser. Experience genuine vectorization without uploading files to third-party cloud servers.
+        </p>
+        <div class="hero-actions">
+          <a href="/#studio" class="btn-cta">Start Vectorizing in Studio</a>
+          <a href="#how-it-works" class="btn-secondary">How It Works</a>
+        </div>
+      </section>
+
+      <!-- Section: What Image to SVG Means -->
+      <section class="content-section">
+        <h2 class="section-heading">Understanding Image to SVG Vectorization</h2>
+        <p class="section-intro">
+          Bitmap images (JPEGs and PNGs) represent visuals as a static grid of colored pixels. When enlarged, pixel grids stretch and lose clarity, causing blurriness and pixelation. In contrast, Scalable Vector Graphics (SVG) represent imagery as mathematical coordinates, bezier curves, and grouped polygon fills.
+        </p>
+        <div class="card-grid-2">
+          <div class="info-card">
+            <h3>The Raster Limitation</h3>
+            <p>Photographs are composed of rigid pixel grids. Zooming in reveals square pixel blocks, and scaling for high-DPI screens multiplies file sizes.</p>
+            <ul>
+              <li>Fixed resolution dependent on pixel dimensions</li>
+              <li>Cannot be styled or animated with CSS</li>
+              <li>Prone to compression artifacts and blur</li>
+            </ul>
+          </div>
+          <div class="info-card">
+            <h3>The SVG Vector Advantage</h3>
+            <p>CodeMyPicture's algorithmic vectorizer extracts geometry and color planes from pixels, reconstructing them as clean mathematical SVG paths.</p>
+            <ul>
+              <li>Infinitely scalable from mobile icons to 4K displays</li>
+              <li>Clean DOM nodes styleable with CSS and JavaScript</li>
+              <li>Compact compressed footprint for responsive web performance</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: How It Works Workflow -->
+      <section id="how-it-works" class="content-section">
+        <h2 class="section-heading">The 4-Stage In-Browser Conversion Workflow</h2>
+        <p class="section-intro">
+          Our vectorization pipeline runs entirely on your local machine using WebAssembly and Web Workers. Here is how your image is processed:
+        </p>
+        <div class="steps-flow">
+          <div class="step-item">
+            <div class="step-num mono">Step 01</div>
+            <h4>Image Loading</h4>
+            <p>Drag and drop your photograph. The browser decodes raw RGBA pixel buffers into memory without network transmission.</p>
+          </div>
+          <div class="step-item">
+            <div class="step-num mono">Step 02</div>
+            <h4>Feature Detection</h4>
+            <p>MediaPipe 478-point facial topology analysis maps facial contours, landmarks, and high-frequency saliency regions.</p>
+          </div>
+          <div class="step-item">
+            <div class="step-num mono">Step 03</div>
+            <h4>Curve Fitting</h4>
+            <p>Color quantization clusters tones, and contour engines fit smooth cubic Bezier paths across multiple detail tiers.</p>
+          </div>
+          <div class="step-item">
+            <div class="step-num mono">Step 04</div>
+            <h4>Code Export</h4>
+            <p>Inspect the output in our built-in CodeMirror editor, or download production-ready SVG, JSX, HTML, and PNG files.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Two Vector Modes -->
+      <section class="content-section">
+        <h2 class="section-heading">Exact Copy vs. Painting Mode</h2>
+        <p class="section-intro">
+          Depending on your creative objective, CodeMyPicture offers two distinct vector synthesis engines:
+        </p>
+        <div class="card-grid-2">
+          <div class="info-card">
+            <h3>Exact Copy Mode</h3>
+            <p>Focuses on faithful graphic contour tracking and precise shape reproduction. Ideal for portraits where you want crisp posterized boundaries and minimal geometric distortion.</p>
+            <ul>
+              <li>Quantized palette clustering up to 64 colors</li>
+              <li>Accurate boundary isolation preventing bleed</li>
+              <li>Optimal for logos, stylized graphics, and sharp avatars</li>
+            </ul>
+          </div>
+          <div class="info-card">
+            <h3>Painting Mode</h3>
+            <p>Focuses on expressive digital art. Uses multi-scale planar brushwork, regional underlay blur to eliminate seams, and soft skin filters across biometric facial landmarks.</p>
+            <ul>
+              <li>Layered artistic brushwork and limbal eye gradients</li>
+              <li>Underlay foundation preventing white seam gaps</li>
+              <li>Optimal for digital portraits, editorial art, and gifts</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Practical Use Cases -->
+      <section class="content-section">
+        <h2 class="section-heading">Practical Use Cases for SVG Artwork</h2>
+        <p class="section-intro">
+          Converting raster photos into pure vector SVG code opens unique creative and developer possibilities:
+        </p>
+        <div class="card-grid-3">
+          <div class="info-card">
+            <h3>Web & App Development</h3>
+            <p>Drop generated SVGs or React JSX components directly into your codebase. Style fills with CSS variables and animate paths with Framer Motion or GSAP.</p>
+          </div>
+          <div class="info-card">
+            <h3>Developer & Team Avatars</h3>
+            <p>Create unified, stylish vector avatars for your documentation, GitHub profile, or company about page without pixelated headshots.</p>
+          </div>
+          <div class="info-card">
+            <h3>Print & Craft Fabrication</h3>
+            <p>Because the output consists of layered, scalable vector paths, SVGs can be imported into vector design software (Illustrator, Inkscape, LightBurn) for laser engraving and screen printing, or converted to outline strokes for vinyl cutting and pen plotting.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Realistic Expectations -->
+      <section class="content-section">
+        <h2 class="section-heading">Realistic Quality & Conversion Expectations</h2>
+        <p class="section-intro">
+          We believe in complete technical transparency. Vectorizing complex real-world photographs involves specific engineering trade-offs:
+        </p>
+        <div class="info-card">
+          <p>
+            Photographs contain millions of unique color gradients. Converting every single pixel into an individual vector node would create multi-gigabyte SVG files that crash web browsers. CodeMyPicture clusters colors into cohesive palettes (e.g. 16 to 64 colors) and fits cubic Bezier curves across major tonal regions.
+          </p>
+          <p>
+            The resulting vector file is an artistic, stylized interpretation rather than a sub-pixel clone. To give you full control over this balance, CodeMyPicture provides High, Medium, and Low quality tiers, allowing you to prioritize visual fidelity or minimal file size.
+          </p>
+        </div>
+      </section>
+
+      <!-- Section: FAQs -->
+      <section class="content-section">
+        <h2 class="section-heading">Frequently Asked Questions</h2>
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary>What happens to my image during SVG conversion?</summary>
+            <p>Your image is decoded and vectorized entirely inside your browser's local sandbox using WebAssembly and Web Workers. The image file is never uploaded to any remote server or stored in any cloud database.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Will the resulting SVG look identical to my original photo?</summary>
+            <p>Vectorization transforms raster pixel grids into mathematical Bezier paths and clustered color regions. The Exact Copy mode produces a faithful graphic contour tracing, while Painting mode creates an expressive planar artistic interpretation. Because complex photographic gradients are grouped into discrete color palettes (up to 64 colors), the output is a stylized vector artwork rather than a raw bitmap copy.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Can I open and edit the SVG in Illustrator or Figma?</summary>
+            <p>Yes. CodeMyPicture exports standards-compliant SVG files with clean viewBox coordinates and path groupings that can be opened, ungrouped, and styled in Adobe Illustrator, Figma, Inkscape, or any vector design tool.</p>
+          </details>
+          <details class="faq-item">
+            <summary>How large is the exported SVG file?</summary>
+            <p>File size depends on the selected quality tier and image complexity. Low Quality typically produces 15 to 40 paths (approx. 5KB to 25KB gzipped), Medium Quality balances detail and size, and High Quality captures intricate contours (often 100KB to 1MB gzipped).</p>
+          </details>
+          <details class="faq-item">
+            <summary>Can I embed the vector output directly into React or HTML?</summary>
+            <p>Yes. Beyond raw SVG download, CodeMyPicture provides a production-ready React JSX component (Portrait.jsx) and a standalone embeddable HTML snippet with a responsive aspect-ratio container.</p>
+          </details>
+        </div>
+      </section>
+
+      <!-- CTA Banner -->
+      <section class="cta-banner">
+        <h2>Ready to Convert Your Photograph to Vector Code?</h2>
+        <p>No account required, no file size limits, and zero cloud uploads. Experience private, in-browser vector synthesis right now.</p>
+        <a href="/#studio" class="btn-cta">Open CodeMyPicture Studio</a>
+      </section>
+    </main>
+
+    <!-- Site Footer -->
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div>&copy; 2026 CodeMyPicture. In-Browser Vector Reconstruction Studio.</div>
+        <div class="footer-links">
+          <a href="/">Home</a>
+          <a href="/image-to-svg/">Image to SVG</a>
+          <a href="/photo-to-vector/">Photo to Vector</a>
+          <a href="/photo-to-painting/">Photo to Painting</a>
+          <a href="/#privacy">Privacy Architecture</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

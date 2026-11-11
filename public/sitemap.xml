@@ -1,9 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://codemypicture.netlify.app/</loc>
-    <lastmod>2026-11-07</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-11-11</lastmod>
+    <changefreq>daily</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://codemypicture.netlify.app/og-image.png</image:loc>
+      <image:title>CodeMyPicture — Transform Photos into SVG Artwork</image:title>
+      <image:caption>In-browser photo to SVG vector reconstruction studio</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://codemypicture.netlify.app/image-to-svg/</loc>
+    <lastmod>2026-11-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://codemypicture.netlify.app/og-image.png</image:loc>
+      <image:title>Image to SVG Converter — Free In-Browser Vectorization</image:title>
+      <image:caption>Convert raster images and photographs into scalable SVG vector code</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://codemypicture.netlify.app/photo-to-vector/</loc>
+    <lastmod>2026-11-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://codemypicture.netlify.app/og-image.png</image:loc>
+      <image:title>Photo to Vector Converter — Transform Portraits to SVG Code</image:title>
+      <image:caption>Biometric facial mesh vector portrait generator</image:caption>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://codemypicture.netlify.app/photo-to-painting/</loc>
+    <lastmod>2026-11-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://codemypicture.netlify.app/og-image.png</image:loc>
+      <image:title>Photo to Painting — In-Browser Digital Portrait Art</image:title>
+      <image:caption>Artistic planar brushwork and soft skin digital portrait painting</image:caption>
+    </image:image>
   </url>
 </urlset>

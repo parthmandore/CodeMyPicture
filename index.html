@@ -91,6 +91,52 @@
               "item": "https://codemypicture.netlify.app/"
             }
           ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://codemypicture.netlify.app/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "How does CodeMyPicture convert photos to SVG without uploading them?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "CodeMyPicture leverages client-side WebAssembly (WASM), WebGL 2.0, and Web Workers. Image segmentation, facial landmark analysis, and vector curve calculations execute directly on your device's CPU and GPU, ensuring your photographs never leave your browser."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What is the difference between Exact Copy and Painting modes?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Exact Copy mode produces a faithful, technical vector tracing of the original photograph with crisp edges and precise color reproduction. Painting mode creates an expressive digital painting with artistic planar brushstrokes, soft skin textures, and impressionistic color blending."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What image formats can I vectorize?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "CodeMyPicture supports all standard web raster formats, including JPEG, PNG, WebP, AVIF, and GIF. High-resolution portrait and scene photographs yield the most detailed vector artwork."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I edit the generated SVG code?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. The built-in Studio Workbench includes a full CodeMirror 6 code editor with live syntax highlighting, search, line numbers, and instant preview synchronization."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is CodeMyPicture free to use?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, CodeMyPicture is 100% free with no account registration, watermarks, or usage limits."
+              }
+            }
+          ]
         }
       ]
     }
@@ -101,16 +147,25 @@
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   </head>
   <body>
-    <!-- Semantic Static Crawl Fallback (Hydrated and replaced by React on DOM mount) -->
+    <!-- Semantic Static Crawl Fallback (Indexed by search crawlers, smoothly hydrated & mounted by React on client) -->
     <div id="root">
       <header class="v4-header studio-header-unified">
         <div class="v4-wordmark">
           CodeMy<em class="v4-wordmark-face">Picture</em>
         </div>
+        <nav aria-label="Main Navigation" class="static-crawl-nav">
+          <a href="#workflow">Workflow</a>
+          <a href="#modes">Modes</a>
+          <a href="#formats">Export Formats</a>
+          <a href="#privacy">Local Privacy</a>
+          <a href="#faq">FAQ</a>
+        </nav>
       </header>
+
       <main class="studio-main-content">
         <div class="studio-page-container">
-          <div class="studio-hero">
+          <!-- Hero Section -->
+          <section class="studio-hero">
             <div class="studio-hero__badge mono">
               <span class="studio-hero__badge-dot"></span>
               <span>SYSTEM // VECTOR RECONSTRUCTION &amp; CREATIVE CODING STUDIO</span>
@@ -119,11 +174,116 @@
               Reconstruct photographs into <em class="studio-hero__title-accent">pure vector code</em>.
             </h1>
             <p class="studio-hero__subtitle">
-              CodeMyPicture transforms portrait and scene photographs into genuine, editable SVG artwork directly inside your browser. Choose expressive digital painting brushwork or crisp photographic reconstruction — executed entirely in local device memory without uploading images.
+              CodeMyPicture transforms portrait and scene photographs into genuine, editable SVG artwork directly inside your browser. Choose expressive digital painting brushwork or crisp photographic reconstruction — executed entirely in local device memory without uploading images to remote servers.
             </p>
-          </div>
+          </section>
+
+          <!-- Section 1: How Image-to-SVG Conversion Works -->
+          <section id="workflow" class="static-content-section">
+            <h2>How Photo to SVG Conversion Works</h2>
+            <p>Our in-browser vector engine transforms raster pixels into clean vector geometry through four automated computational stages:</p>
+            <ol class="static-steps-list">
+              <li>
+                <strong>1. In-Browser Image Ingestion:</strong> Select any JPEG, PNG, or WebP photograph. The file is read directly into your browser's local sandbox memory without network uploads.
+              </li>
+              <li>
+                <strong>2. Biometric &amp; Planar Analysis:</strong> MediaPipe 478-point facial mesh detection maps facial topology, contours, feature landmarks, and regional color saliency in real-time.
+              </li>
+              <li>
+                <strong>3. Multi-Tier Vector Synthesis:</strong> The vectorization pipeline clusters color palettes, fits smooth cubic Bezier paths, computes regional underlays, and constructs layered SVG nodes.
+              </li>
+              <li>
+                <strong>4. Interactive Code Studio &amp; Export:</strong> Inspect, fine-tune, and copy vector source code in the integrated CodeMirror editor, or export standalone SVG, HTML, JSX, and PNG files.
+              </li>
+            </ol>
+          </section>
+
+          <!-- Section 2: Generation Modes Comparison -->
+          <section id="modes" class="static-content-section">
+            <h2>Two Distinct Creative Vector Modes</h2>
+            <p>CodeMyPicture provides two purpose-built rendering engines designed for different creative requirements:</p>
+            <div class="static-modes-grid">
+              <article>
+                <h3>Exact Copy Mode (Faithful Vectorization)</h3>
+                <p>Designed for graphic recreation, icon design, and precise vector copies. Uses high-resolution color quantization, edge smoothing, and multi-scale contour tracing to produce crisp, scalable SVG recreations with minimal geometric distortion.</p>
+                <ul>
+                  <li>Up to 64 clustered palette colors</li>
+                  <li>Smooth cubic Bezier curve fitting</li>
+                  <li>Compound path merging for optimized file sizes</li>
+                  <li>Instant switching between High, Medium, and Low quality tiers</li>
+                </ul>
+              </article>
+              <article>
+                <h3>Painting Mode (Expressive Digital Artwork)</h3>
+                <p>Designed for artistic portraiture and creative digital art. Synthesizes stylized impressionistic brushwork using planar face modeling, soft skin filtering, directional hair contours, and limbal ring iris gradients.</p>
+                <ul>
+                  <li>Multi-scale layered brushwork synthesis</li>
+                  <li>Regional underlay blur eliminating white seams</li>
+                  <li>Biometric anatomical feature preservation (eyes, lips, brows)</li>
+                  <li>Scalable SVG digital paintings ready for framing or web display</li>
+                </ul>
+              </article>
+            </div>
+          </section>
+
+          <!-- Section 3: Supported Output Formats -->
+          <section id="formats" class="static-content-section">
+            <h2>Export in Four Production-Ready Formats</h2>
+            <p>Every reconstructed portrait can be downloaded or copied in multiple formats tailored for developers, designers, and digital artists:</p>
+            <ul>
+              <li><strong>Raw Vector SVG (<code>portrait.svg</code>):</strong> Clean, standards-compliant SVG with semantic grouping IDs, optimized viewBox, and compressed path geometry.</li>
+              <li><strong>Embeddable HTML (<code>embed.html</code>):</strong> Standalone, self-contained HTML page with responsive aspect-ratio framing, zero external dependencies, and dark-mode styling.</li>
+              <li><strong>React Component (<code>Portrait.jsx</code>):</strong> Drop-in React JSX component with customizable size, className, and SVG props for modern web applications.</li>
+              <li><strong>High-DPI PNG:</strong> Crisp raster export rendered at native display resolution for print, avatars, and social media sharing.</li>
+            </ul>
+          </section>
+
+          <!-- Section 4: Local Processing & Privacy Architecture -->
+          <section id="privacy" class="static-content-section">
+            <h2>100% Client-Side Privacy Architecture</h2>
+            <p>Unlike traditional online converters that upload your personal photographs to remote servers, CodeMyPicture executes entirely inside your browser's local sandbox:</p>
+            <ul>
+              <li><strong>Zero Cloud Uploads:</strong> Your images are processed using client-side WebAssembly (WASM), WebGL, and dedicated background Web Workers.</li>
+              <li><strong>Biometric Security:</strong> Facial mesh coordinates and color profiles are computed locally in volatile memory and destroyed when the tab is closed.</li>
+              <li><strong>Offline Capability:</strong> Once loaded, vector synthesis operates independently of network connectivity.</li>
+            </ul>
+          </section>
+
+          <!-- Section 5: Frequently Asked Questions -->
+          <section id="faq" class="static-content-section">
+            <h2>Frequently Asked Questions</h2>
+            <details>
+              <summary>How does CodeMyPicture convert photos to SVG without uploading them?</summary>
+              <p>CodeMyPicture leverages client-side WebAssembly (WASM), WebGL 2.0, and Web Workers. Image segmentation, facial landmark analysis, and vector curve calculations execute directly on your device's CPU and GPU, ensuring your photographs never leave your browser.</p>
+            </details>
+            <details>
+              <summary>What is the difference between Exact Copy and Painting modes?</summary>
+              <p>Exact Copy mode produces a faithful, technical vector tracing of the original photograph with crisp edges and precise color reproduction. Painting mode creates an expressive digital painting with artistic planar brushstrokes, soft skin textures, and impressionistic color blending.</p>
+            </details>
+            <details>
+              <summary>What image formats can I vectorize?</summary>
+              <p>CodeMyPicture supports all standard web raster formats, including JPEG, PNG, WebP, AVIF, and GIF. High-resolution portrait and scene photographs yield the most detailed vector artwork.</p>
+            </details>
+            <details>
+              <summary>Can I edit the generated SVG code?</summary>
+              <p>Yes. The built-in Studio Workbench includes a full CodeMirror 6 code editor with live syntax highlighting, search, line numbers, and instant preview synchronization.</p>
+            </details>
+            <details>
+              <summary>Is CodeMyPicture free to use?</summary>
+              <p>Yes, CodeMyPicture is 100% free with no account registration, watermarks, or usage limits.</p>
+            </details>
+          </section>
         </div>
       </main>
+
+      <footer class="static-crawl-footer">
+        <p>&copy; 2026 CodeMyPicture. In-Browser Vector Reconstruction Studio. All rights reserved.</p>
+        <p class="static-footer-links" style="margin-top: 10px; font-size: 13px;">
+          <a href="/image-to-svg/" style="margin-right: 16px; color: #D1CEC7;">Image to SVG Converter</a>
+          <a href="/photo-to-vector/" style="margin-right: 16px; color: #D1CEC7;">Photo to Vector Converter</a>
+          <a href="/photo-to-painting/" style="color: #D1CEC7;">Photo to Painting</a>
+        </p>
+      </footer>
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

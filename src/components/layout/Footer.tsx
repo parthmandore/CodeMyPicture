@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, ExternalLink, ArrowUpRight } from 'lucide-react';
+import { ShieldCheck, ArrowUpRight } from 'lucide-react';
 
 export interface FooterProps {
   onOpenPrivacy?: () => void;
@@ -26,18 +26,33 @@ export const Footer: React.FC<FooterProps> = ({ onOpenPrivacy }) => {
 
         {/* Navigation & Live Deployment */}
         <div className="studio-footer__links-col">
-          <div className="studio-footer__col-heading mono">DEPLOYMENT & REPO</div>
+          <div className="studio-footer__col-heading mono">TOOLS & CONVERTERS</div>
           <ul className="studio-footer__link-list">
             <li>
               <a
-                href="https://codemypicture.netlify.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="studio-footer__link studio-footer__link--highlight"
-                title="Open deployed live website at codemypicture.netlify.app"
+                href="/image-to-svg/"
+                className="studio-footer__link"
+                title="Convert raster images to clean SVG vector code"
               >
-                <span>codemypicture.netlify.app</span>
-                <ExternalLink size={12} />
+                <span>Image to SVG Converter</span>
+              </a>
+            </li>
+            <li>
+              <a
+                href="/photo-to-vector/"
+                className="studio-footer__link"
+                title="Transform portrait photographs into vector artwork"
+              >
+                <span>Photo to Vector Converter</span>
+              </a>
+            </li>
+            <li>
+              <a
+                href="/photo-to-painting/"
+                className="studio-footer__link"
+                title="Create painterly digital portrait art in pure SVG"
+              >
+                <span>Photo to Painting</span>
               </a>
             </li>
             <li>

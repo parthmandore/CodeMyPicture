@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowLeft, Upload } from 'lucide-react';
 import { runV4Pipeline } from '../../engine/v4/v4Pipeline';
 import { V4PipelineResult, V4ExperimentOptions, WorkbenchStatus } from '../../engine/v4/types';
-import { QualitySetting, AllQualitiesResult } from '../../engine/v4/tiers';
+import { QualitySetting, AllQualitiesResult, mergeTiersData } from '../../engine/v4/tiers';
 import { computeSvgSizeStats, SvgSizeStats } from '../../utils/svgDiagnostics';
 import { faceDetectionService, NormalizedLandmark } from '../../services/faceDetection';
 import { SegmentationService } from '../../services/segmentation/segmentationService';
@@ -29,12 +29,14 @@ export interface V4DiagnosticWorkbenchProps {
   onBackToStudio: () => void;
   initialImageUrl?: string;
   initialFileName?: string;
+  onPhotoUploaded?: (imageUrl: string, fileName: string) => void;
 }
 
 export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
   onBackToStudio,
   initialImageUrl,
   initialFileName,
+  onPhotoUploaded,
 }) => {
   // Check query parameters
   const searchStr = typeof window !== 'undefined' ? window.location.search + window.location.hash : '';
@@ -93,15 +95,21 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
   // Sync state from background GenerationManager
   useEffect(() => {
     if (!job) return;
+
+    // Reject updates belonging to a different photograph (prevents stale photo overlap)
+    if (currentImgUrl && job.sourceUrl && job.sourceUrl !== currentImgUrl) {
+      return;
+    }
+
     if (job.status === 'completed') {
       setWorkbenchMode(job.mode);
-      setSelectedQuality(job.quality === 'low' ? 'low' : 'high');
+      setSelectedQuality(job.quality);
       setCurrentSvg(job.svgOutput);
       setOriginalSvg(job.svgOutput);
       setSvgBlobUrl(job.svgBlobUrl);
       setLastGoodBlobUrl(job.svgBlobUrl);
       setDiffBlobUrl(job.diffBlobUrl);
-      setTiersData(job.tiersData);
+      setTiersData((prev) => mergeTiersData(prev, job.tiersData) || job.tiersData);
       setSummaryData(job.summaryData);
       setImageDims(job.imageDimensions);
       setLogs(job.logs);
@@ -123,7 +131,7 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
       setErrorMsg(job.error || 'Generation failed');
       setLogs(job.logs);
     }
-  }, [job]);
+  }, [job, currentImgUrl]);
 
   // SVGs & sandboxed blob URL
   const [originalSvg, setOriginalSvg] = useState<string>('');
@@ -950,41 +958,35 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
     },
     [addLog, transitionToStatus]
   );
+  void processImage;
 
   const handleTriggerGenerate = useCallback(() => {
     if (!currentImgUrl || isGenerating) return;
-    const bq: QualitySetting = selectedQuality === 'medium' ? 'high' : selectedQuality;
+    const bq: QualitySetting = selectedQuality;
     generationManager.startJob(currentImgUrl, currentFileName, workbenchMode, bq).catch((err) => {
-                console.error('Generate click error:', err);
-              });
-  }, [currentImgUrl, isGenerating, selectedQuality, currentFileName, workbenchMode, processImage]);
+      console.error('Generate click error:', err);
+    });
+  }, [currentImgUrl, isGenerating, selectedQuality, currentFileName, workbenchMode]);
 
   // Handle Quality Selection: Low vs Medium vs High
   const handleQualitySelect = useCallback(
     (q: 'low' | 'medium' | 'high') => {
       setSelectedQuality(q);
-      if (job?.tiersData) {
-        generationManager.switchTier(q === 'low' ? 'low' : 'high');
-      }
-      if (q === 'high') {
-        analytics.trackEvent('high_quality_selected');
-      } else if (q === 'low') {
-        analytics.trackEvent('low_quality_selected');
-      }
-      if (!tiersData) return;
+      analytics.trackEvent(`${q}_quality_selected`);
 
       const targetData =
         q === 'low'
-          ? (tiersData.low || tiersData.tier3 || tiersData.tier2)
+          ? (tiersData?.low || tiersData?.tier3)
           : q === 'medium'
-          ? ((tiersData as any).medium || tiersData.tier2 || tiersData.high || tiersData.tier1)
-          : (tiersData.high || tiersData.tier1);
-      const targetSvg = targetData?.svgString;
+          ? (tiersData?.medium || (tiersData as any)?.tier2)
+          : (tiersData?.high || tiersData?.tier1);
 
-      if (targetSvg) {
-        setCurrentSvg(targetSvg);
-        setOriginalSvg(targetSvg);
-        const blob = new Blob([targetSvg], { type: 'image/svg+xml;charset=utf-8' });
+      const hasGenuineTier = Boolean(targetData && !targetData.isFallback && targetData.svgString);
+
+      if (hasGenuineTier) {
+        setCurrentSvg(targetData!.svgString);
+        setOriginalSvg(targetData!.svgString);
+        const blob = new Blob([targetData!.svgString], { type: 'image/svg+xml;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         setSvgBlobUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev);
@@ -994,8 +996,11 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
           if (prev) URL.revokeObjectURL(prev);
           return url;
         });
-        setPaintingLayers(extractPaintingLayers(targetSvg));
+        setPaintingLayers(extractPaintingLayers(targetData!.svgString));
       }
+
+      // Always notify generationManager so it updates active quality and synthesizes on demand if needed
+      generationManager.switchTier(q);
     },
     [tiersData]
   );
@@ -1038,10 +1043,18 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
     }
   };
 
+  const prevInitialUrlRef = useRef<string | undefined>(undefined);
+
   // Unified photo selection handler (Step 1: Immediately show new photo, clear old results/state, cancel old run)
   const handlePhotoSelection = useCallback(
     (url: string, name: string) => {
+      prevInitialUrlRef.current = url;
+      onPhotoUploaded?.(url, name);
+
+      // Cancel any active run in GenerationManager and local workbench immediately
+      generationManager.cancelActiveJob('Switching photo');
       cancelCurrentRun('Switching photo');
+
       // IMMEDIATELY show the new photo and clear old results/state
       setCurrentImgUrl(url);
       setCurrentFileName(name);
@@ -1053,15 +1066,38 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
       setPaintingLayers([]);
       setDetectedLandmarks([]);
       setSummaryData(null);
+      setTiersData(null);
       setColorMetrics({});
       setLogs([]);
       setErrorMsg(null);
+      setWorkbenchStatus('analyzing');
 
-      const bq: QualitySetting = selectedQuality === 'medium' ? 'high' : selectedQuality;
+      const bq: QualitySetting = selectedQuality;
       generationManager.startJob(url, name, workbenchMode, bq).catch(console.error);
     },
-    [cancelCurrentRun, processImage]
+    [cancelCurrentRun, selectedQuality, workbenchMode, onPhotoUploaded]
   );
+
+  // Sync when initialImageUrl prop changes from external router/upload screen
+  useEffect(() => {
+    if (initialImageUrl && initialImageUrl !== prevInitialUrlRef.current) {
+      prevInitialUrlRef.current = initialImageUrl;
+      const fileName = initialFileName || (initialImageUrl.split('/').pop()?.split('?')[0] || 'photo.jpg');
+      setCurrentImgUrl(initialImageUrl);
+      setCurrentFileName(fileName);
+
+      const activeJob = generationManager.getJob();
+      if (
+        activeJob &&
+        activeJob.sourceUrl === initialImageUrl &&
+        (activeJob.status === 'running' || activeJob.status === 'completed')
+      ) {
+        // Connected to existing active/completed job for this URL
+        return;
+      }
+      handlePhotoSelection(initialImageUrl, fileName);
+    }
+  }, [initialImageUrl, initialFileName, handlePhotoSelection]);
 
   // Auto-run on mount: attach to existing background job or initiate if missing
   useEffect(() => {
@@ -1074,7 +1110,7 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
       ) {
         return;
       }
-      const bq: QualitySetting = selectedQuality === 'medium' ? 'high' : selectedQuality;
+      const bq: QualitySetting = selectedQuality;
       generationManager.startJob(currentImgUrl, currentFileName, workbenchMode, bq).catch((err) => {
         console.error('Initial background job start error:', err);
       });
@@ -1121,6 +1157,7 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
         }
         const url = URL.createObjectURL(file);
         handlePhotoSelection(url, file.name);
+        e.target.value = '';
       }
     },
     [handlePhotoSelection, showToast]
@@ -1307,7 +1344,7 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
           <button
             className="v4-btn v4-btn--generate"
             onClick={() => {
-              const bq: QualitySetting = selectedQuality === 'medium' ? 'high' : selectedQuality;
+              const bq: QualitySetting = selectedQuality;
               generationManager.startJob(currentImgUrl, currentFileName, workbenchMode, bq).catch(console.error);
             }}
             disabled={isGenerating || !currentImgUrl}
@@ -1317,44 +1354,37 @@ export const V4DiagnosticWorkbench: React.FC<V4DiagnosticWorkbenchProps> = ({
           </button>
         </div>
 
-        {/* Mobile Row 2 for native selects (< 768px) */}
-        <div className="v4-mobile-row-selects" style={{ display: 'none' }}>
-          <select
-            className="v4-select"
-            value={workbenchMode}
-            onChange={(e) => handleModeSelect(e.target.value as 'painting' | 'recreation')}
-            aria-label="Mode"
-          >
-            <option value="recreation">Exact copy</option>
-            <option value="painting">Painting</option>
-          </select>
-          <select
-            className="v4-select"
-            value={selectedQuality}
-            onChange={(e) => handleQualitySelect(e.target.value as 'low' | 'medium' | 'high')}
-            aria-label="Quality"
-          >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </select>
-        </div>
+
       </header>
 
       {/* Mobile Tabs Bar (< 768px) */}
       <div className="v4-mobile-tabs-bar">
-        <button
-          className={`v4-mobile-tab-btn ${activeMobileTab === 'code' ? 'is-active' : ''}`}
-          onClick={() => setActiveMobileTab('code')}
-        >
-          <span>Code</span>
-        </button>
         <button
           className={`v4-mobile-tab-btn ${activeMobileTab === 'result' ? 'is-active' : ''}`}
           onClick={() => setActiveMobileTab('result')}
         >
           <span>Result</span>
         </button>
+        <button
+          className={`v4-mobile-tab-btn ${activeMobileTab === 'code' ? 'is-active' : ''}`}
+          onClick={() => {
+            setActiveMobileTab('code');
+            if (editorTab === 'diagnostics') {
+              setEditorTab('svg');
+            }
+          }}
+        >
+          <span>Code (&lt; / &gt;)</span>
+        </button>
+        {currentSvg && (
+          <button
+            className="v4-mobile-tab-btn v4-mobile-tab-btn--export"
+            onClick={() => setIsExportOpen(true)}
+            title="Export code and raster formats"
+          >
+            <span>Export</span>
+          </button>
+        )}
       </div>
 
       {/* 2. TWO-PANE WORKSPACE: LEFT = CODE PANEL, RIGHT = RESULT PANEL */}
