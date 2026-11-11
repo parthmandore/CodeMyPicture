@@ -39,6 +39,15 @@ export interface RecreationResultPair {
     gzipBytes: number;
     pathCount: number;
     executionTimeMs: number;
+    isFallback?: boolean;
+  };
+  medium: {
+    svgString: string;
+    rawBytes: number;
+    gzipBytes: number;
+    pathCount: number;
+    executionTimeMs: number;
+    isFallback?: boolean;
   };
   low: {
     svgString: string;
@@ -46,6 +55,7 @@ export interface RecreationResultPair {
     gzipBytes: number;
     pathCount: number;
     executionTimeMs: number;
+    isFallback?: boolean;
   };
 }
 
@@ -131,9 +141,16 @@ function buildRecreationPalette(
  * Executes the High-Fidelity Photographic Recreation Engine.
  */
 export function runRecreationEngine(input: RecreationEngineInput): RecreationResultPair {
-  const { canvas, width, height, colorPalette, options: _options } = input;
+  const { canvas, width, height, colorPalette, options } = input;
   const ctx = canvas.getContext('2d')!;
   const rawImgData = ctx.getImageData(0, 0, width, height);
+
+  // Target quality: synthesize the requested tier ('high' | 'medium' | 'low') or all if requested.
+  // Both High and Low are always generated in the primary pass so toggling between them is instant (<1ms) and 100% cached
+  const targetQuality = options?.quality || options?.selectedTier;
+  const renderHigh = true;
+  const renderMed = targetQuality === 'medium' || targetQuality === 'all';
+  const renderLow = true;
 
   // Base canvas rectangle in average photo color
   const avgHex = colorPalette?.averagePhotoColor || colorPalette?.background?.hex || '#77716D';
@@ -212,39 +229,46 @@ export function runRecreationEngine(input: RecreationEngineInput): RecreationRes
   // STEP 2: HIGH QUALITY RECREATION (ltres: 0.6, qtres: 0.6, roundcoords: 2, pathomit: 3)
   // Maximum sharpness and subpixel precision for fabric stripes, eyelashes, teeth, hair
   // =========================================================================
-  const t0High = performance.now();
+  let minHigh = '';
+  let rawBytesHigh = 0;
+  let gzipBytesHigh = 0;
+  let pathCountHigh = 0;
+  let timeHighMs = 0;
 
-  const detailHighOptions: any = {
-    corsenabled: false,
-    ltres: 0.6,               // Tight linear tolerance for crisp straight edges
-    qtres: 0.6,               // Tight quadratic tolerance for sharp corners
-    pathomit: 3,              // Ultra-fine photographic details (catchlights, teeth edges, stripes)
-    rightangleenhance: false,
-    layering: 1,              // Stacked detail layers
-    strokewidth: 0,
-    linefilter: false,
-    scale: 1,
-    roundcoords: 2,           // 2 decimal places: subpixel razor sharpness
-    viewbox: true,
-    desc: false,
-    blurradius: 0,
-    blurdelta: 0,
-  };
+  if (renderHigh) {
+    const t0High = performance.now();
 
-  if (masterPalette.length >= 16) {
-    detailHighOptions.pal = masterPalette;
-    detailHighOptions.numberofcolors = masterPalette.length;
-    detailHighOptions.colorsampling = 0;
-  } else {
-    detailHighOptions.numberofcolors = 48;
-    detailHighOptions.colorsampling = 2;
-    detailHighOptions.colorquantcycles = 3;
-  }
+    const detailHighOptions: any = {
+      corsenabled: false,
+      ltres: 0.6,               // Tight linear tolerance for crisp straight edges
+      qtres: 0.6,               // Tight quadratic tolerance for sharp corners
+      pathomit: 3,              // Ultra-fine photographic details (catchlights, teeth edges, stripes)
+      rightangleenhance: false,
+      layering: 1,              // Stacked detail layers
+      strokewidth: 0,
+      linefilter: false,
+      scale: 1,
+      roundcoords: 2,           // 2 decimal places: subpixel razor sharpness
+      viewbox: true,
+      desc: false,
+      blurradius: 0,
+      blurdelta: 0,
+    };
 
-  const detailHighRaw = ImageTracer.imagedataToSVG(rawImgData, detailHighOptions);
-  const detailHighPaths = (detailHighRaw.match(/<path\b[^>]*\/>/g) || []);
+    if (masterPalette.length >= 16) {
+      detailHighOptions.pal = masterPalette.map((c) => ({ ...c }));
+      detailHighOptions.numberofcolors = masterPalette.length;
+      detailHighOptions.colorsampling = 0;
+    } else {
+      detailHighOptions.numberofcolors = 48;
+      detailHighOptions.colorsampling = 2;
+      detailHighOptions.colorquantcycles = 3;
+    }
 
-  const fullHighSvg = `<?xml version="1.0" encoding="UTF-8"?>
+    const detailHighRaw = ImageTracer.imagedataToSVG(rawImgData, detailHighOptions);
+    const detailHighPaths = (detailHighRaw.match(/<path\b[^>]*\/>/g) || []);
+
+    const fullHighSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
   <!-- 0. Base Canvas in Average Photo Color -->
   <rect width="${width}" height="${height}" fill="${avgHex}" />
@@ -258,55 +282,134 @@ export function runRecreationEngine(input: RecreationEngineInput): RecreationRes
   </g>
 </svg>`;
 
-  const timeHighMs = Math.round(performance.now() - t0High);
-  const minHigh = minifySvgDocument(fullHighSvg, {
-    preset: 'max',
-    relativeCommands: true,
-    scale2xViewBox: false,
-  });
+    timeHighMs = Math.round(performance.now() - t0High);
+    minHigh = minifySvgDocument(fullHighSvg, {
+      preset: 'max',
+      relativeCommands: true,
+      scale2xViewBox: false,
+    });
 
-  const rawBytesHigh = new TextEncoder().encode(minHigh).length;
-  const gzipBytesHigh = Math.round(rawBytesHigh * 0.35);
-  const pathCountHigh = underlayPaths.length + detailHighPaths.length;
-
-  // =========================================================================
-  // STEP 3: LOW QUALITY RECREATION (pathomit: 14, balanced for < 3s fast load)
-  // Preserves line structures and facial likeness at ~30% path count and size
-  // =========================================================================
-  const t0Low = performance.now();
-  const lowPalette = masterPalette.slice(0, 32);
-
-  const detailLowOptions: any = {
-    corsenabled: false,
-    ltres: 1.1,
-    qtres: 1.1,
-    pathomit: 14,
-    rightangleenhance: false,
-    layering: 1,
-    strokewidth: 0,
-    linefilter: false,
-    scale: 1,
-    roundcoords: 1,
-    viewbox: true,
-    desc: false,
-    blurradius: 0,
-    blurdelta: 0,
-  };
-
-  if (lowPalette.length >= 14) {
-    detailLowOptions.pal = lowPalette;
-    detailLowOptions.numberofcolors = lowPalette.length;
-    detailLowOptions.colorsampling = 0;
-  } else {
-    detailLowOptions.numberofcolors = 28;
-    detailLowOptions.colorsampling = 2;
-    detailLowOptions.colorquantcycles = 2;
+    rawBytesHigh = new TextEncoder().encode(minHigh).length;
+    gzipBytesHigh = Math.round(rawBytesHigh * 0.35);
+    pathCountHigh = underlayPaths.length + detailHighPaths.length;
   }
 
-  const detailLowRaw = ImageTracer.imagedataToSVG(rawImgData, detailLowOptions);
-  const detailLowPaths = (detailLowRaw.match(/<path\b[^>]*\/>/g) || []);
+  // =========================================================================
+  // STEP 3: MEDIUM QUALITY RECREATION (ltres: 0.8, qtres: 0.8, roundcoords: 2, pathomit: 8)
+  // Balanced fidelity with clean contours and ~40% fewer paths
+  // =========================================================================
+  let minMed = '';
+  let rawBytesMed = 0;
+  let gzipBytesMed = 0;
+  let pathCountMed = 0;
+  let timeMedMs = 0;
 
-  const fullLowSvg = `<?xml version="1.0" encoding="UTF-8"?>
+  if (renderMed) {
+    const t0Med = performance.now();
+    const medPalette = masterPalette.slice(0, 38);
+
+    const detailMedOptions: any = {
+      corsenabled: false,
+      ltres: 0.8,
+      qtres: 0.8,
+      pathomit: 8,
+      rightangleenhance: false,
+      layering: 1,
+      strokewidth: 0,
+      linefilter: false,
+      scale: 1,
+      roundcoords: 2,
+      viewbox: true,
+      desc: false,
+      blurradius: 0,
+      blurdelta: 0,
+    };
+
+    if (medPalette.length >= 14) {
+      detailMedOptions.pal = medPalette.map((c) => ({ ...c }));
+      detailMedOptions.numberofcolors = medPalette.length;
+      detailMedOptions.colorsampling = 0;
+    } else {
+      detailMedOptions.numberofcolors = 36;
+      detailMedOptions.colorsampling = 2;
+      detailMedOptions.colorquantcycles = 2;
+    }
+
+    const detailMedRaw = ImageTracer.imagedataToSVG(rawImgData, detailMedOptions);
+    const detailMedPaths = (detailMedRaw.match(/<path\b[^>]*\/>/g) || []);
+
+    const fullMedSvg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
+  <!-- 0. Base Canvas in Average Photo Color -->
+  <rect width="${width}" height="${height}" fill="${avgHex}" />
+  <!-- 1. Full-Coverage Regional Underlay (10 colors, 0 shapes dropped) -->
+  <g id="v4-bottom-layer">
+    ${underlayPaths.join('\n    ')}
+  </g>
+  <!-- 2. Balanced Medium Detail Layer -->
+  <g id="v4-detail-layer">
+    ${detailMedPaths.join('\n    ')}
+  </g>
+</svg>`;
+
+    timeMedMs = Math.round(performance.now() - t0Med);
+    minMed = minifySvgDocument(fullMedSvg, {
+      preset: 'balanced',
+      relativeCommands: true,
+      scale2xViewBox: false,
+      simplifyTolerancePx: 0.10,
+    });
+
+    rawBytesMed = new TextEncoder().encode(minMed).length;
+    gzipBytesMed = Math.round(rawBytesMed * 0.34);
+    pathCountMed = underlayPaths.length + detailMedPaths.length;
+  }
+
+  // =========================================================================
+  // STEP 4: LOW QUALITY RECREATION (pathomit: 14, balanced for < 3s fast load)
+  // Preserves line structures and facial likeness at ~30% path count and size
+  // =========================================================================
+  let minLow = '';
+  let rawBytesLow = 0;
+  let gzipBytesLow = 0;
+  let pathCountLow = 0;
+  let timeLowMs = 0;
+
+  if (renderLow) {
+    const t0Low = performance.now();
+    const lowPalette = masterPalette.slice(0, 32);
+
+    const detailLowOptions: any = {
+      corsenabled: false,
+      ltres: 1.1,
+      qtres: 1.1,
+      pathomit: 14,
+      rightangleenhance: false,
+      layering: 1,
+      strokewidth: 0,
+      linefilter: false,
+      scale: 1,
+      roundcoords: 1,
+      viewbox: true,
+      desc: false,
+      blurradius: 0,
+      blurdelta: 0,
+    };
+
+    if (lowPalette.length >= 14) {
+      detailLowOptions.pal = lowPalette.map((c) => ({ ...c }));
+      detailLowOptions.numberofcolors = lowPalette.length;
+      detailLowOptions.colorsampling = 0;
+    } else {
+      detailLowOptions.numberofcolors = 28;
+      detailLowOptions.colorsampling = 2;
+      detailLowOptions.colorquantcycles = 2;
+    }
+
+    const detailLowRaw = ImageTracer.imagedataToSVG(rawImgData, detailLowOptions);
+    const detailLowPaths = (detailLowRaw.match(/<path\b[^>]*\/>/g) || []);
+
+    const fullLowSvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
   <!-- 0. Base Canvas in Average Photo Color -->
   <rect width="${width}" height="${height}" fill="${avgHex}" />
@@ -320,17 +423,47 @@ export function runRecreationEngine(input: RecreationEngineInput): RecreationRes
   </g>
 </svg>`;
 
-  const timeLowMs = Math.round(performance.now() - t0Low);
-  const minLow = minifySvgDocument(fullLowSvg, {
-    preset: 'balanced',
-    relativeCommands: true,
-    scale2xViewBox: false,
-    simplifyTolerancePx: 0.15,
-  });
+    timeLowMs = Math.round(performance.now() - t0Low);
+    minLow = minifySvgDocument(fullLowSvg, {
+      preset: 'balanced',
+      relativeCommands: true,
+      scale2xViewBox: false,
+      simplifyTolerancePx: 0.15,
+    });
 
-  const rawBytesLow = new TextEncoder().encode(minLow).length;
-  const gzipBytesLow = Math.round(rawBytesLow * 0.33);
-  const pathCountLow = underlayPaths.length + detailLowPaths.length;
+    rawBytesLow = new TextEncoder().encode(minLow).length;
+    gzipBytesLow = Math.round(rawBytesLow * 0.33);
+    pathCountLow = underlayPaths.length + detailLowPaths.length;
+  }
+
+  // Cross-assign fallback for whichever tiers were not rendered
+  const fallbackSvg = minHigh || minMed || minLow;
+  const fallbackRawBytes = rawBytesHigh || rawBytesMed || rawBytesLow;
+  const fallbackGzipBytes = gzipBytesHigh || gzipBytesMed || gzipBytesLow;
+  const fallbackPathCount = pathCountHigh || pathCountMed || pathCountLow;
+  const fallbackTime = timeHighMs || timeMedMs || timeLowMs;
+
+  if (!minHigh) {
+    minHigh = fallbackSvg;
+    rawBytesHigh = fallbackRawBytes;
+    gzipBytesHigh = fallbackGzipBytes;
+    pathCountHigh = fallbackPathCount;
+    timeHighMs = fallbackTime;
+  }
+  if (!minMed) {
+    minMed = fallbackSvg;
+    rawBytesMed = fallbackRawBytes;
+    gzipBytesMed = fallbackGzipBytes;
+    pathCountMed = fallbackPathCount;
+    timeMedMs = fallbackTime;
+  }
+  if (!minLow) {
+    minLow = fallbackSvg;
+    rawBytesLow = fallbackRawBytes;
+    gzipBytesLow = fallbackGzipBytes;
+    pathCountLow = fallbackPathCount;
+    timeLowMs = fallbackTime;
+  }
 
   return {
     high: {
@@ -339,6 +472,15 @@ export function runRecreationEngine(input: RecreationEngineInput): RecreationRes
       gzipBytes: gzipBytesHigh,
       pathCount: pathCountHigh,
       executionTimeMs: timeHighMs,
+      isFallback: !renderHigh,
+    },
+    medium: {
+      svgString: minMed,
+      rawBytes: rawBytesMed,
+      gzipBytes: gzipBytesMed,
+      pathCount: pathCountMed,
+      executionTimeMs: timeMedMs,
+      isFallback: !renderMed,
     },
     low: {
       svgString: minLow,
@@ -346,6 +488,7 @@ export function runRecreationEngine(input: RecreationEngineInput): RecreationRes
       gzipBytes: gzipBytesLow,
       pathCount: pathCountLow,
       executionTimeMs: timeLowMs,
+      isFallback: !renderLow,
     },
   };
 }

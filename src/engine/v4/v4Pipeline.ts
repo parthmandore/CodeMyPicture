@@ -18,7 +18,7 @@ import { analyzePhotoColors } from './colorAnalysis';
 import { runPaintingEngine } from './paintingEngine';
 import { runRecreationEngine } from './recreationEngine';
 import { NormalizedLandmark } from '../../services/faceDetection/types';
-import { AllTiersResult } from './tiers';
+import { AllTiersResult, QualitySetting } from './tiers';
 
 export interface V4PipelineInput {
   image: HTMLImageElement | HTMLCanvasElement;
@@ -38,7 +38,10 @@ export async function runV4Pipeline(input: V4PipelineInput): Promise<V4PipelineR
   if (typeof HTMLCanvasElement !== 'undefined' && image instanceof HTMLCanvasElement) {
     canvas = image;
     ctx = canvas.getContext('2d')!;
-  } else if (typeof document !== 'undefined') {
+  } else if (typeof OffscreenCanvas !== 'undefined' && image instanceof OffscreenCanvas) {
+    canvas = image as any;
+    ctx = (image as any).getContext('2d')!;
+  } else if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
     canvas = document.createElement('canvas');
     canvas.width = (image as any).naturalWidth || (image as any).width || 800;
     canvas.height = (image as any).naturalHeight || (image as any).height || 1000;
@@ -70,8 +73,14 @@ export async function runV4Pipeline(input: V4PipelineInput): Promise<V4PipelineR
 
   let tiersResult: AllTiersResult | undefined = undefined;
 
-  // Resolve active quality: 'high' (default) vs 'low'
-  const activeQuality = (options?.quality || (options?.selectedTier === 'low' || options?.selectedTier === 'tier2' || options?.selectedTier === 'tier3' ? 'low' : 'high')) as 'high' | 'low';
+  // Resolve active quality: 'high' | 'medium' | 'low'
+  const activeQuality: QualitySetting = options?.quality || (
+    options?.selectedTier === 'low' || options?.selectedTier === 'tier3'
+      ? 'low'
+      : options?.selectedTier === 'medium' || options?.selectedTier === 'tier2'
+      ? 'medium'
+      : 'high'
+  );
 
   if (mode === 'recreation') {
     // =========================================================================
@@ -86,10 +95,30 @@ export async function runV4Pipeline(input: V4PipelineInput): Promise<V4PipelineR
       options,
     });
 
-    const activeSvg = activeQuality === 'low' ? recResults.low.svgString : recResults.high.svgString;
-    const activePaths = activeQuality === 'low' ? recResults.low.pathCount : recResults.high.pathCount;
-    const activeBytes = activeQuality === 'low' ? recResults.low.rawBytes : recResults.high.rawBytes;
-    const activeTime = activeQuality === 'low' ? recResults.low.executionTimeMs : recResults.high.executionTimeMs;
+    const activeSvg =
+      activeQuality === 'low'
+        ? recResults.low.svgString
+        : activeQuality === 'medium'
+        ? recResults.medium.svgString
+        : recResults.high.svgString;
+    const activePaths =
+      activeQuality === 'low'
+        ? recResults.low.pathCount
+        : activeQuality === 'medium'
+        ? recResults.medium.pathCount
+        : recResults.high.pathCount;
+    const activeBytes =
+      activeQuality === 'low'
+        ? recResults.low.rawBytes
+        : activeQuality === 'medium'
+        ? recResults.medium.rawBytes
+        : recResults.high.rawBytes;
+    const activeTime =
+      activeQuality === 'low'
+        ? recResults.low.executionTimeMs
+        : activeQuality === 'medium'
+        ? recResults.medium.executionTimeMs
+        : recResults.high.executionTimeMs;
 
     candidateA = {
       candidateId: 'candidate-a',
@@ -118,6 +147,21 @@ export async function runV4Pipeline(input: V4PipelineInput): Promise<V4PipelineR
       psnr: 0,
       colorError: 0,
       executionTimeMs: recResults.high.executionTimeMs,
+      isFallback: recResults.high.isFallback || false,
+    };
+
+    const mediumResult = {
+      quality: 'medium' as const,
+      svgString: recResults.medium.svgString,
+      rawBytes: recResults.medium.rawBytes,
+      gzipBytes: recResults.medium.gzipBytes,
+      pathCount: recResults.medium.pathCount,
+      nodeCount: recResults.medium.pathCount * 4,
+      ssim: 0,
+      psnr: 0,
+      colorError: 0,
+      executionTimeMs: recResults.medium.executionTimeMs,
+      isFallback: recResults.medium.isFallback || false,
     };
 
     const lowResult = {
@@ -131,15 +175,17 @@ export async function runV4Pipeline(input: V4PipelineInput): Promise<V4PipelineR
       psnr: 0,
       colorError: 0,
       executionTimeMs: recResults.low.executionTimeMs,
+      isFallback: recResults.low.isFallback || false,
     };
 
     tiersResult = {
       high: highResult,
+      medium: mediumResult,
       low: lowResult,
       selectedQuality: activeQuality,
       // Compatibility aliases
       tier1: highResult,
-      tier2: lowResult,
+      tier2: mediumResult,
       tier3: lowResult,
       selectedTier: activeQuality,
     };
@@ -158,10 +204,30 @@ export async function runV4Pipeline(input: V4PipelineInput): Promise<V4PipelineR
       options,
     });
 
-    const activeSvg = activeQuality === 'low' ? paintResults.low.svgString : paintResults.high.svgString;
-    const activePaths = activeQuality === 'low' ? paintResults.low.pathCount : paintResults.high.pathCount;
-    const activeBytes = activeQuality === 'low' ? paintResults.low.rawBytes : paintResults.high.rawBytes;
-    const activeTime = activeQuality === 'low' ? paintResults.low.executionTimeMs : paintResults.high.executionTimeMs;
+    const activeSvg =
+      activeQuality === 'low'
+        ? paintResults.low.svgString
+        : activeQuality === 'medium'
+        ? paintResults.medium.svgString
+        : paintResults.high.svgString;
+    const activePaths =
+      activeQuality === 'low'
+        ? paintResults.low.pathCount
+        : activeQuality === 'medium'
+        ? paintResults.medium.pathCount
+        : paintResults.high.pathCount;
+    const activeBytes =
+      activeQuality === 'low'
+        ? paintResults.low.rawBytes
+        : activeQuality === 'medium'
+        ? paintResults.medium.rawBytes
+        : paintResults.high.rawBytes;
+    const activeTime =
+      activeQuality === 'low'
+        ? paintResults.low.executionTimeMs
+        : activeQuality === 'medium'
+        ? paintResults.medium.executionTimeMs
+        : paintResults.high.executionTimeMs;
 
     candidateC = {
       candidateId: 'candidate-c',
@@ -190,6 +256,21 @@ export async function runV4Pipeline(input: V4PipelineInput): Promise<V4PipelineR
       psnr: 0,
       colorError: 0,
       executionTimeMs: paintResults.high.executionTimeMs,
+      isFallback: paintResults.high.isFallback || false,
+    };
+
+    const mediumResult = {
+      quality: 'medium' as const,
+      svgString: paintResults.medium.svgString,
+      rawBytes: paintResults.medium.rawBytes,
+      gzipBytes: paintResults.medium.gzipBytes,
+      pathCount: paintResults.medium.pathCount,
+      nodeCount: paintResults.medium.pathCount * 4,
+      ssim: 0,
+      psnr: 0,
+      colorError: 0,
+      executionTimeMs: paintResults.medium.executionTimeMs,
+      isFallback: paintResults.medium.isFallback || false,
     };
 
     const lowResult = {
@@ -203,15 +284,17 @@ export async function runV4Pipeline(input: V4PipelineInput): Promise<V4PipelineR
       psnr: 0,
       colorError: 0,
       executionTimeMs: paintResults.low.executionTimeMs,
+      isFallback: paintResults.low.isFallback || false,
     };
 
     tiersResult = {
       high: highResult,
+      medium: mediumResult,
       low: lowResult,
       selectedQuality: activeQuality,
       // Compatibility aliases
       tier1: highResult,
-      tier2: lowResult,
+      tier2: mediumResult,
       tier3: lowResult,
       selectedTier: activeQuality,
     };

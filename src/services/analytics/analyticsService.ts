@@ -26,6 +26,7 @@ export type AnalyticsEventName =
   | 'painting_mode_selected'
   | 'recreation_mode_selected'
   | 'high_quality_selected'
+  | 'medium_quality_selected'
   | 'low_quality_selected'
   | 'svg_exported'
   | 'png_exported'

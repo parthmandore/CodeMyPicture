@@ -157,7 +157,7 @@ export interface V4LayerVisibility {
   glasses?: boolean;
 }
 
-export type QualitySetting = 'high' | 'low';
+export type QualitySetting = 'high' | 'medium' | 'low';
 
 export interface V4ExperimentOptions {
   // Mode flag: 'painting' (artistic interpretation) vs 'recreation' (faithful vector copy)

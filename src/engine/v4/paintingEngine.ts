@@ -38,6 +38,15 @@ export interface PaintingResultPair {
     gzipBytes: number;
     pathCount: number;
     executionTimeMs: number;
+    isFallback?: boolean;
+  };
+  medium: {
+    svgString: string;
+    rawBytes: number;
+    gzipBytes: number;
+    pathCount: number;
+    executionTimeMs: number;
+    isFallback?: boolean;
   };
   low: {
     svgString: string;
@@ -45,6 +54,7 @@ export interface PaintingResultPair {
     gzipBytes: number;
     pathCount: number;
     executionTimeMs: number;
+    isFallback?: boolean;
   };
 }
 
@@ -118,9 +128,16 @@ function buildEnhancedPalette(
  * Executes the Organic Painting Engine for both High and Low qualities.
  */
 export function runPaintingEngine(input: PaintingEngineInput): PaintingResultPair {
-  const { canvas, width, height, colorPalette, options: _options } = input;
+  const { canvas, width, height, colorPalette, options } = input;
   const ctx = canvas.getContext('2d')!;
   const imgData = ctx.getImageData(0, 0, width, height);
+
+  // Target quality: synthesize the requested tier ('high' | 'medium' | 'low') or all if requested.
+  // Both High and Low are always generated in the primary pass so toggling between them is instant (<1ms) and 100% cached
+  const targetQuality = options?.quality || options?.selectedTier;
+  const renderHigh = true;
+  const renderMed = targetQuality === 'medium' || targetQuality === 'all';
+  const renderLow = true;
 
   // Background base color in true average photo color (eliminates seam bleed)
   const baseColor = colorPalette?.averagePhotoColor || colorPalette?.background?.hex || '#77716D';
@@ -152,37 +169,44 @@ export function runPaintingEngine(input: PaintingEngineInput): PaintingResultPai
   // STEP 2: HIGH QUALITY PAINTING (Enhanced Master Palette, 44-48 colors)
   // Rich, harmonious planar modeling with accurate skin, hair, and clothing tones
   // =========================================================================
-  const t0High = performance.now();
-  const highPalette = buildEnhancedPalette(imgData, colorPalette, 48);
+  let minHigh = '';
+  let rawBytesHigh = 0;
+  let gzipBytesHigh = 0;
+  let pathMatchesHigh: string[] = [];
+  let timeHighMs = 0;
 
-  const detailHighOptions: any = {
-    corsenabled: false,
-    ltres: 1.0,
-    qtres: 1.0,
-    pathomit: 8,
-    rightangleenhance: false,
-    layering: 1,
-    scale: 1,
-    roundcoords: 1,
-    viewbox: true,
-    blurradius: 0,
-    blurdelta: 0,
-  };
+  if (renderHigh) {
+    const t0High = performance.now();
+    const highPalette = buildEnhancedPalette(imgData, colorPalette, 48);
 
-  if (highPalette.length >= 16) {
-    detailHighOptions.pal = highPalette;
-    detailHighOptions.numberofcolors = highPalette.length;
-    detailHighOptions.colorsampling = 0;
-  } else {
-    detailHighOptions.numberofcolors = 44;
-    detailHighOptions.colorsampling = 2;
-    detailHighOptions.colorquantcycles = 4;
-  }
+    const detailHighOptions: any = {
+      corsenabled: false,
+      ltres: 1.0,
+      qtres: 1.0,
+      pathomit: 8,
+      rightangleenhance: false,
+      layering: 1,
+      scale: 1,
+      roundcoords: 1,
+      viewbox: true,
+      blurradius: 0,
+      blurdelta: 0,
+    };
 
-  const detailHighRaw = ImageTracer.imagedataToSVG(imgData, detailHighOptions);
-  const detailHighPaths = (detailHighRaw.match(/<path\b[^>]*\/>/g) || []);
+    if (highPalette.length >= 16) {
+      detailHighOptions.pal = highPalette.map((c) => ({ ...c }));
+      detailHighOptions.numberofcolors = highPalette.length;
+      detailHighOptions.colorsampling = 0;
+    } else {
+      detailHighOptions.numberofcolors = 44;
+      detailHighOptions.colorsampling = 2;
+      detailHighOptions.colorquantcycles = 4;
+    }
 
-  const fullHighSvg = `<svg viewBox="0 0 ${width} ${height}" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    const detailHighRaw = ImageTracer.imagedataToSVG(imgData, detailHighOptions);
+    const detailHighPaths = (detailHighRaw.match(/<path\b[^>]*\/>/g) || []);
+
+    const fullHighSvg = `<svg viewBox="0 0 ${width} ${height}" version="1.1" xmlns="http://www.w3.org/2000/svg">
   <!-- Zero-Holes Base Canvas -->
   <rect width="${width}" height="${height}" fill="${baseColor}" />
   <g id="v4-painting-underlay">
@@ -193,53 +217,127 @@ export function runPaintingEngine(input: PaintingEngineInput): PaintingResultPai
   </g>
 </svg>`;
 
-  const timeHighMs = Math.round(performance.now() - t0High);
-  const optimizedHigh = optimizeSvgDocument(fullHighSvg);
-  const minHigh = minifySvgDocument(optimizedHigh, {
-    preset: 'balanced',
-    relativeCommands: true,
-    scale2xViewBox: false,
-  });
+    timeHighMs = Math.round(performance.now() - t0High);
+    const optimizedHigh = optimizeSvgDocument(fullHighSvg);
+    minHigh = minifySvgDocument(optimizedHigh, {
+      preset: 'balanced',
+      relativeCommands: true,
+      scale2xViewBox: false,
+    });
 
-  const rawBytesHigh = new TextEncoder().encode(minHigh).length;
-  const gzipBytesHigh = Math.round(rawBytesHigh * 0.35);
-  const pathMatchesHigh = minHigh.match(/<path\b[^>]*\/?>/gi) || [];
-
-  // =========================================================================
-  // STEP 3: LOW QUALITY PAINTING (Bold Expressive Planes, 28-32 colors)
-  // Broad painterly planar strokes, compact size, fast load, accurate hues
-  // =========================================================================
-  const t0Low = performance.now();
-  const lowPalette = buildEnhancedPalette(imgData, colorPalette, 30);
-
-  const detailLowOptions: any = {
-    corsenabled: false,
-    ltres: 1.4,
-    qtres: 1.4,
-    pathomit: 20,
-    rightangleenhance: false,
-    layering: 1,
-    scale: 1,
-    roundcoords: 1,
-    viewbox: true,
-    blurradius: 0,
-    blurdelta: 0,
-  };
-
-  if (lowPalette.length >= 14) {
-    detailLowOptions.pal = lowPalette.slice(0, 32);
-    detailLowOptions.numberofcolors = detailLowOptions.pal.length;
-    detailLowOptions.colorsampling = 0;
-  } else {
-    detailLowOptions.numberofcolors = 28;
-    detailLowOptions.colorsampling = 2;
-    detailLowOptions.colorquantcycles = 3;
+    rawBytesHigh = new TextEncoder().encode(minHigh).length;
+    gzipBytesHigh = Math.round(rawBytesHigh * 0.35);
+    pathMatchesHigh = minHigh.match(/<path\b[^>]*\/?>/gi) || [];
   }
 
-  const detailLowRaw = ImageTracer.imagedataToSVG(imgData, detailLowOptions);
-  const detailLowPaths = (detailLowRaw.match(/<path\b[^>]*\/>/g) || []);
+  // =========================================================================
+  // STEP 3: MEDIUM QUALITY PAINTING (Balanced Planar Planes, 34-36 colors)
+  // Preserves nuanced likeness with fast load and balanced payload
+  // =========================================================================
+  let minMed = '';
+  let rawBytesMed = 0;
+  let gzipBytesMed = 0;
+  let pathMatchesMed: string[] = [];
+  let timeMedMs = 0;
 
-  const fullLowSvg = `<svg viewBox="0 0 ${width} ${height}" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  if (renderMed) {
+    const t0Med = performance.now();
+    const medPalette = buildEnhancedPalette(imgData, colorPalette, 36);
+
+    const detailMedOptions: any = {
+      corsenabled: false,
+      ltres: 1.2,
+      qtres: 1.2,
+      pathomit: 14,
+      rightangleenhance: false,
+      layering: 1,
+      scale: 1,
+      roundcoords: 1,
+      viewbox: true,
+      blurradius: 0,
+      blurdelta: 0,
+    };
+
+    if (medPalette.length >= 16) {
+      detailMedOptions.pal = medPalette.slice(0, 36).map((c) => ({ ...c }));
+      detailMedOptions.numberofcolors = detailMedOptions.pal.length;
+      detailMedOptions.colorsampling = 0;
+    } else {
+      detailMedOptions.numberofcolors = 36;
+      detailMedOptions.colorsampling = 2;
+      detailMedOptions.colorquantcycles = 3;
+    }
+
+    const detailMedRaw = ImageTracer.imagedataToSVG(imgData, detailMedOptions);
+    const detailMedPaths = (detailMedRaw.match(/<path\b[^>]*\/>/g) || []);
+
+    const fullMedSvg = `<svg viewBox="0 0 ${width} ${height}" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <!-- Zero-Holes Base Canvas -->
+  <rect width="${width}" height="${height}" fill="${baseColor}" />
+  <g id="v4-painting-underlay">
+    ${underlayPaths.join('\n    ')}
+  </g>
+  <g id="v4-painting-detail">
+    ${detailMedPaths.join('\n    ')}
+  </g>
+</svg>`;
+
+    timeMedMs = Math.round(performance.now() - t0Med);
+    const optimizedMed = optimizeSvgDocument(fullMedSvg);
+    minMed = minifySvgDocument(optimizedMed, {
+      preset: 'balanced',
+      relativeCommands: true,
+      simplifyTolerancePx: 0.15,
+      scale2xViewBox: false,
+    });
+
+    rawBytesMed = new TextEncoder().encode(minMed).length;
+    gzipBytesMed = Math.round(rawBytesMed * 0.34);
+    pathMatchesMed = minMed.match(/<path\b[^>]*\/?>/gi) || [];
+  }
+
+  // =========================================================================
+  // STEP 4: LOW QUALITY PAINTING (Bold Expressive Planes, 28-32 colors)
+  // Broad painterly planar strokes, compact size, fast load, accurate hues
+  // =========================================================================
+  let minLow = '';
+  let rawBytesLow = 0;
+  let gzipBytesLow = 0;
+  let pathMatchesLow: string[] = [];
+  let timeLowMs = 0;
+
+  if (renderLow) {
+    const t0Low = performance.now();
+    const lowPalette = buildEnhancedPalette(imgData, colorPalette, 30);
+
+    const detailLowOptions: any = {
+      corsenabled: false,
+      ltres: 1.4,
+      qtres: 1.4,
+      pathomit: 20,
+      rightangleenhance: false,
+      layering: 1,
+      scale: 1,
+      roundcoords: 1,
+      viewbox: true,
+      blurradius: 0,
+      blurdelta: 0,
+    };
+
+    if (lowPalette.length >= 14) {
+      detailLowOptions.pal = lowPalette.slice(0, 32).map((c) => ({ ...c }));
+      detailLowOptions.numberofcolors = detailLowOptions.pal.length;
+      detailLowOptions.colorsampling = 0;
+    } else {
+      detailLowOptions.numberofcolors = 28;
+      detailLowOptions.colorsampling = 2;
+      detailLowOptions.colorquantcycles = 3;
+    }
+
+    const detailLowRaw = ImageTracer.imagedataToSVG(imgData, detailLowOptions);
+    const detailLowPaths = (detailLowRaw.match(/<path\b[^>]*\/>/g) || []);
+
+    const fullLowSvg = `<svg viewBox="0 0 ${width} ${height}" version="1.1" xmlns="http://www.w3.org/2000/svg">
   <!-- Zero-Holes Base Canvas -->
   <rect width="${width}" height="${height}" fill="${baseColor}" />
   <g id="v4-painting-underlay">
@@ -250,33 +348,70 @@ export function runPaintingEngine(input: PaintingEngineInput): PaintingResultPai
   </g>
 </svg>`;
 
-  const timeLowMs = Math.round(performance.now() - t0Low);
-  const optimizedLow = optimizeSvgDocument(fullLowSvg);
-  const minLow = minifySvgDocument(optimizedLow, {
-    preset: 'compact',
-    relativeCommands: true,
-    simplifyTolerancePx: 0.20,
-    scale2xViewBox: false,
-  });
+    timeLowMs = Math.round(performance.now() - t0Low);
+    const optimizedLow = optimizeSvgDocument(fullLowSvg);
+    minLow = minifySvgDocument(optimizedLow, {
+      preset: 'compact',
+      relativeCommands: true,
+      simplifyTolerancePx: 0.20,
+      scale2xViewBox: false,
+    });
 
-  const rawBytesLow = new TextEncoder().encode(minLow).length;
-  const gzipBytesLow = Math.round(rawBytesLow * 0.33);
-  const pathMatchesLow = minLow.match(/<path\b[^>]*\/?>/gi) || [];
+    rawBytesLow = new TextEncoder().encode(minLow).length;
+    gzipBytesLow = Math.round(rawBytesLow * 0.33);
+    pathMatchesLow = minLow.match(/<path\b[^>]*\/?>/gi) || [];
+  }
+
+  // Cross-assign fallback for whichever tiers were not rendered
+  const fallbackSvg = minHigh || minMed || minLow;
+  const fallbackRawBytes = rawBytesHigh || rawBytesMed || rawBytesLow;
+  const fallbackGzipBytes = gzipBytesHigh || gzipBytesMed || gzipBytesLow;
+  const fallbackPathsCount = pathMatchesHigh.length || pathMatchesMed.length || pathMatchesLow.length;
+  const fallbackTime = timeHighMs || timeMedMs || timeLowMs;
+
+  if (!minHigh) {
+    minHigh = fallbackSvg;
+    rawBytesHigh = fallbackRawBytes;
+    gzipBytesHigh = fallbackGzipBytes;
+    timeHighMs = fallbackTime;
+  }
+  if (!minMed) {
+    minMed = fallbackSvg;
+    rawBytesMed = fallbackRawBytes;
+    gzipBytesMed = fallbackGzipBytes;
+    timeMedMs = fallbackTime;
+  }
+  if (!minLow) {
+    minLow = fallbackSvg;
+    rawBytesLow = fallbackRawBytes;
+    gzipBytesLow = fallbackGzipBytes;
+    timeLowMs = fallbackTime;
+  }
 
   return {
     high: {
       svgString: minHigh,
       rawBytes: rawBytesHigh,
       gzipBytes: gzipBytesHigh,
-      pathCount: pathMatchesHigh.length,
+      pathCount: pathMatchesHigh.length || fallbackPathsCount,
       executionTimeMs: timeHighMs,
+      isFallback: !renderHigh,
+    },
+    medium: {
+      svgString: minMed,
+      rawBytes: rawBytesMed,
+      gzipBytes: gzipBytesMed,
+      pathCount: pathMatchesMed.length || fallbackPathsCount,
+      executionTimeMs: timeMedMs,
+      isFallback: !renderMed,
     },
     low: {
       svgString: minLow,
       rawBytes: rawBytesLow,
       gzipBytes: gzipBytesLow,
-      pathCount: pathMatchesLow.length,
+      pathCount: pathMatchesLow.length || fallbackPathsCount,
       executionTimeMs: timeLowMs,
+      isFallback: !renderLow,
     },
   };
 }

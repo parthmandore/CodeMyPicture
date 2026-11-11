@@ -13,7 +13,7 @@ import { optimizeSvgDocument } from './svgOptimizer';
 import { minifySvgDocument } from './sizeOptimizer/svgMinifier';
 import type { NormalizedLandmark } from '../../services/faceDetection/types';
 
-export type QualitySetting = 'high' | 'low';
+export type QualitySetting = 'high' | 'medium' | 'low';
 export type QualityTier = QualitySetting | 'tier1' | 'tier2' | 'tier3';
 
 export interface QualityConfig {
@@ -60,6 +60,26 @@ export const RECREATION_QUALITY_CONFIGS: Record<QualitySetting, QualityConfig> =
     blurradius: 1,
     blurdelta: 16,
   },
+  medium: {
+    id: 'medium',
+    name: 'Medium',
+    label: 'Medium Quality',
+    description: 'Balanced recreation: dedicated 18 skin and 15 hair tones, 12 path omit, optimal detail balance.',
+    targetColors: 32,
+    skinColors: 18,
+    hairColors: 15,
+    pathOmitBase: 12,
+    ltres: 0.9,
+    qtres: 0.9,
+    underlayColors: 10,
+    underlayBlur: 3,
+    mergeCompoundPaths: true,
+    precision: 1,
+    relativeCommands: true,
+    saliencyWeighting: false,
+    blurradius: 1,
+    blurdelta: 16,
+  },
   low: {
     id: 'low',
     name: 'Low',
@@ -84,9 +104,10 @@ export const RECREATION_QUALITY_CONFIGS: Record<QualitySetting, QualityConfig> =
 
 export const TIER_CONFIGS: Record<string, QualityConfig> = {
   high: RECREATION_QUALITY_CONFIGS.high,
+  medium: RECREATION_QUALITY_CONFIGS.medium,
   low: RECREATION_QUALITY_CONFIGS.low,
   tier1: RECREATION_QUALITY_CONFIGS.high,
-  tier2: RECREATION_QUALITY_CONFIGS.low,
+  tier2: RECREATION_QUALITY_CONFIGS.medium,
   tier3: RECREATION_QUALITY_CONFIGS.low,
 };
 
@@ -130,6 +151,24 @@ export const PAINTING_QUALITY_CONFIGS: Record<QualitySetting, PaintingQualityCon
     softSkinFilter: true,
     softSkinRadius: 1.2,
   },
+  medium: {
+    id: 'medium',
+    name: 'Medium',
+    label: 'Medium Quality',
+    description: 'Balanced digital portrait: harmonious planar modeling, 36 colors, single-pass lashes, soft skin filter.',
+    targetColors: 36,
+    pathOmitBase: 14,
+    mergeCompoundPaths: true,
+    precision: 1,
+    relativeCommands: true,
+    saliencyWeighting: false,
+    lashDetail: 'single-pass',
+    creaseLine: false,
+    limbalGradient: true,
+    dualCatchlight: false,
+    softSkinFilter: true,
+    softSkinRadius: 1.0,
+  },
   low: {
     id: 'low',
     name: 'Low',
@@ -152,9 +191,10 @@ export const PAINTING_QUALITY_CONFIGS: Record<QualitySetting, PaintingQualityCon
 
 export const PAINTING_TIER_CONFIGS: Record<string, PaintingQualityConfig> = {
   high: PAINTING_QUALITY_CONFIGS.high,
+  medium: PAINTING_QUALITY_CONFIGS.medium,
   low: PAINTING_QUALITY_CONFIGS.low,
   tier1: PAINTING_QUALITY_CONFIGS.high,
-  tier2: PAINTING_QUALITY_CONFIGS.low,
+  tier2: PAINTING_QUALITY_CONFIGS.medium,
   tier3: PAINTING_QUALITY_CONFIGS.low,
 };
 
@@ -170,10 +210,12 @@ export interface QualityExecutionResult {
   colorError: number;
   skinColorError?: number;
   executionTimeMs: number;
+  isFallback?: boolean;
 }
 
 export interface AllQualitiesResult {
   high: QualityExecutionResult;
+  medium?: QualityExecutionResult;
   low: QualityExecutionResult;
   selectedQuality: QualitySetting;
   // Compatibility aliases
@@ -185,6 +227,46 @@ export interface AllQualitiesResult {
 
 export type TierExecutionResult = QualityExecutionResult;
 export type AllTiersResult = AllQualitiesResult;
+
+/**
+ * Safely merges existing and incoming tier results so that genuine (non-fallback)
+ * results are permanently preserved across quality switches and background synthesis.
+ */
+export function mergeTiersData(
+  existing?: AllQualitiesResult | null,
+  incoming?: AllQualitiesResult | null
+): AllQualitiesResult | undefined {
+  if (!existing) return incoming || undefined;
+  if (!incoming) return existing;
+
+  const pickTier = (key: 'high' | 'medium' | 'low'): QualityExecutionResult | undefined => {
+    const inc = incoming[key];
+    const ext = existing[key];
+    // If incoming is genuine (not a fallback and has SVG), use incoming
+    if (inc && !inc.isFallback && inc.svgString) return inc;
+    // Otherwise, if existing is genuine, preserve existing!
+    if (ext && !ext.isFallback && ext.svgString) return ext;
+    // If neither is genuine, return whichever exists
+    return inc || ext;
+  };
+
+  const high = pickTier('high') || existing.high || incoming.high;
+  const medium = pickTier('medium') || existing.medium || incoming.medium;
+  const low = pickTier('low') || existing.low || incoming.low;
+
+  const selectedQuality = incoming.selectedQuality || existing.selectedQuality || 'high';
+
+  return {
+    high,
+    medium,
+    low,
+    selectedQuality,
+    tier1: high,
+    tier2: medium || low,
+    tier3: low,
+    selectedTier: incoming.selectedTier || existing.selectedTier || selectedQuality,
+  };
+}
 
 /**
  * Computes PSNR (Peak Signal-to-Noise Ratio) between two identical-size RGBA buffers.
